@@ -48,12 +48,12 @@ substr_right <- function(x, n){
 #' @param excel_url sting; url of the file. Must have an xlsx or xls extension
 #' @importFrom tools file_ext
 #' @return filepath to where the temporary file is stored
-download_temp_file <- function(excel_url) {
+download_temp_file <- function(excel_url, filename) {
   temporary_directory <- tempdir()
   temp_file <- paste0(
     temporary_directory,
     "/",
-    names(excel_url),
+    filename,
     ".",
     tools::file_ext(excel_url)
   )
@@ -63,8 +63,8 @@ download_temp_file <- function(excel_url) {
   # )
 
   download.file(
-    excel_url,
-    temp_file,
+    url = excel_url,
+    destfile = temp_file,
     quiet = TRUE,
     mode = "wb"
   )

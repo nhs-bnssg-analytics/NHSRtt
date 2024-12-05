@@ -13,10 +13,6 @@ tidy_file(excel_filepath, sheet = "Provider", n_skip)
 }
 \value{
 a tidy tibble
-trust, specialty, period, type,
-#'   months_waited and value
-trust, specialty, period, type,
-#'   months_waited and value
 }
 \description{
 Make the excel file a tidy format
