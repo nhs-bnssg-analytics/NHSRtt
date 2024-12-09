@@ -6,6 +6,8 @@
 #' @param date_start date; start date (earliest date is 1st April 2011, but the
 #'   default is 1st April 2019)
 #' @param date_end; date; end date (defaults to "today")
+#' @param show_progress logical; show progress of downloading and processing
+#'   files. Defaults to false
 #'
 #' @return a tibble with fields for trust, specialty, period, type,
 #'   months_waited and value
@@ -13,11 +15,20 @@
 #' @export
 #'
 
-get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/", date_start = as.Date("2019-04-01"), date_end = Sys.Date()) {
+get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/", date_start = as.Date("2019-04-01"), date_end = Sys.Date(), show_progress = FALSE) {
 
   # check date inputs
   if (!inherits(date_start, "Date")) stop("date_start needs to be a date format")
   if (!inherits(date_end, "Date")) stop("date_end needs to be a date format")
+
+  # check show_progress
+  if (length(show_progress) != 1) {
+    stop("show_progress must be length 1")
+  } else if (!is.logical(show_progress)) {
+    stop("show_progress must be TRUE or FALSE")
+  } else if (is.na(show_progress)) {
+    stop("show_progress must be TRUE or FALSE")
+  }
 
   # calculate start year for financial year for date_start
   month_start <- as.numeric(format(date_start, "%m"))
@@ -45,7 +56,8 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
 
   xl_files <- purrr::map(
     annual_urls,
-    obtain_links
+    obtain_links,
+    .progress = show_progress
   ) |>
     unlist() |>
     (function(x) x[grepl("xls$|xlsx$", x)])() |>
@@ -59,7 +71,43 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
   dts <- as.Date(paste0("01", substr_right(names(xl_files), 5)), "%d%b%y")
 
   xl_files <- xl_files[dts >= date_start]
-  return(xl_files)
+
+  # update on progress
+  if (show_progress == TRUE) cat("Downloading data...\n")
+
+  # download the files into a temporary location
+  xl_files <- xl_files |>
+    purrr::imap_chr(
+      download_temp_file,
+      .progress = show_progress
+    )
+
+  # update on progress
+  if (show_progress == TRUE) cat("Understanding sheet structure...\n")
+
+  # calculate the number of rows to skip at the start of each sheet when reading
+  # the files in
+  skip_rows <- purrr::map_dbl(
+    xl_files,
+    identify_n_skip_rows
+  )
+
+  # update on progress
+  if (show_progress == TRUE) cat("Reading and tidying data...\n")
+
+  # read in and tidy the files
+  df <- purrr::map2(
+    .x = xl_files,
+    .y = skip_rows,
+    .f = ~ tidy_file(
+      excel_filepath = .x,
+      n_skip = .y
+    ),
+    .progress = show_progress
+  ) |>
+    purrr::list_rbind()
+
+  return(df)
 }
 
 
