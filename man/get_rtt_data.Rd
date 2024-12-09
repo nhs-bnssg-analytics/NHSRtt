@@ -31,3 +31,11 @@ a tibble with fields for trust, specialty, period, type,
 Download and tidy the referral to treatment data from the NHS Statistics
 webpage
 }
+\examples{
+monthly_rtt <- NHSRtt::get_rtt_data(
+  date_start = as.Date("2024-10-01"),
+  date_end = as.Date("2024-11-01"),
+  show_progress = TRUE
+)
+
+}
