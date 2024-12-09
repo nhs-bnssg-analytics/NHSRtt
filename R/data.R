@@ -92,13 +92,14 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
     )
 
   # update on progress
-  if (show_progress == TRUE) cat("Understanding sheet structure...\n")
+  if (show_progress == TRUE) cat("Understanding sheet structures...\n")
 
   # calculate the number of rows to skip at the start of each sheet when reading
   # the files in
   skip_rows <- purrr::map_dbl(
     xl_files,
-    identify_n_skip_rows
+    identify_n_skip_rows,
+    .progress = show_progress
   )
 
   # update on progress
@@ -208,7 +209,7 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
       )
 
     monthly_proportions <- month_attribution_lkp(
-      junk1[["week_end"]]
+      rtt[["week_end"]]
     ) |>
       dplyr::mutate(
         months_waited = (lubridate::month(mnth) - lubridate::month(wait_start_month)) +
