@@ -15,11 +15,13 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' monthly_rtt <- NHSRtt::get_rtt_data(
 #'   date_start = as.Date("2024-10-01"),
 #'   date_end = as.Date("2024-11-01"),
 #'   show_progress = TRUE
 #' )
+#' }
 #'
 
 get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/", date_start = as.Date("2019-04-01"), date_end = Sys.Date(), show_progress = FALSE) {
