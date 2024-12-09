@@ -96,7 +96,6 @@ download_temp_file <- function(excel_url, filename) {
 #' @importFrom dplyr tibble case_when mutate filter
 #' @importFrom tidyr pivot_longer
 #'
-#' @noRd
 #' @return a tibble of week_end, wait_start_month, month_weight where week_end
 #'   are the dates provided, wait_start_month is the start of the month that the
 #'   waiting period began, and month_weight is a value between 0 and

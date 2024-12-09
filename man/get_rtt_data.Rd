@@ -8,7 +8,8 @@ webpage}
 get_rtt_data(
   url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
   date_start = as.Date("2019-04-01"),
-  date_end = Sys.Date()
+  date_end = Sys.Date(),
+  show_progress = FALSE
 )
 }
 \arguments{
@@ -16,6 +17,9 @@ get_rtt_data(
 
 \item{date_start}{date; start date (earliest date is 1st April 2011, but the
 default is 1st April 2019)}
+
+\item{show_progress}{logical; show progress of downloading and processing
+files. Defaults to false}
 
 \item{date_end;}{date; end date (defaults to "today")}
 }
