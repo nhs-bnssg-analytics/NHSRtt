@@ -65,8 +65,7 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
 
   xl_files <- purrr::map(
     annual_urls,
-    obtain_links,
-    .progress = show_progress
+    obtain_links
   ) |>
     unlist() |>
     (function(x) x[grepl("xls$|xlsx$", x)])() |>
