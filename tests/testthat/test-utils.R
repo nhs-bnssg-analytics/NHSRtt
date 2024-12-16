@@ -29,3 +29,26 @@ test_that("month_attribution_lkp function tests", {
     label = "dimensions are expected"
   )
 })
+
+
+test_that("redistribute_incompletes works", {
+  incompletes <- c(1, 2, 3, -1, 5, -4)
+  expect_identical(
+    sum(incompletes),
+    redistribute_incompletes(incompletes),
+    label = "total number of incompletes remains the same before and after the function is used"
+  )
+
+  expect_gt(
+    redistribute_incompletes(incompletes) |>
+      min(),
+    0,
+    label = "there are no negative values returned from the redistribute_incompletes function"
+  )
+
+  expect_error(
+    redistribute_incompletes(-5:2),
+    "not possible to redistribute incompletes because the sum of incompletes is negative"
+  )
+
+})

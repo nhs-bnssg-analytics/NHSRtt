@@ -7,18 +7,18 @@
 #'
 #' @return named vector with urls linked to within the provided url
 #' @importFrom xml2 read_html
-#' @importFrom rvest html_nodes html_attr html_text
+#' @importFrom rvest html_elements html_attr html_text
 #'
 
 obtain_links <- function(url) {
   url_html <- xml2::read_html(url)
 
   links <- url_html |>
-    rvest::html_nodes("a") |>
+    rvest::html_elements("a") |>
     rvest::html_attr("href")
 
   link_text <- url_html |>
-    rvest::html_nodes("a") |>
+    rvest::html_elements("a") |>
     rvest::html_text() |>
     trimws()
 
@@ -136,4 +136,161 @@ month_attribution_lkp <- function(week_end_dates) {
 
   return(all_dates)
 
+}
+
+
+#' Calculates the flow from each stock at each timestep
+#'
+#' @detail for each timestep, the stock is calculated as the current count of
+#'   patients waiting at that timestep plus the inflow (via referrals or
+#'   incomplete pathways from previous timestep) minus outflow (pathways have
+#'   been completed or reneges, which are deduced from the other flows). This
+#'   stock is divided into "months waited", and patients with incomplete
+#'   pathways at the end of the timestep are incremented up to an additional
+#'   month's waiting time
+#' @param data data frame with fields called months_waited_id, type, period_id,
+#'   value. Type can take the values "Referrals", "Incomplete" and "Complete".
+#'   Referrals will only have "months_waited_id" = 0. period_id is an integer
+#'   representing the chronology of the data.
+#' @param max_months_waited integer; the maximum number of months to group
+#'   patients waiting times by for the analysis. Data are published up to 104
+#'   weeks, so 24 is likely to be the maximum useful value for this argument.
+#' @return
+#'
+calculate_timestep_transitions <- function(data, max_months_waited) {
+  # inflows at each time step (period) are a combination of referrals in the
+  # period and incomplete counts from the previous timestep
+
+  referrals <- data |>
+    dplyr::filter(
+      months_waited_id == 0,
+      type == "Referrals",
+      period_id > 0 # not need for input at timestep t-1
+    ) |>
+    dplyr::select(
+      "period_id",
+      "months_waited_id",
+      node_inflow = "value"
+    )
+
+  incomplete_at_previous_timeperiod <- data |>
+    filter(
+      type == "Incomplete"
+    ) |>
+    mutate(
+      period_id = period_id + 1,
+      months_waited_id = case_when(
+        months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
+        .default = months_waited_id + 1
+      )
+    ) |>
+    filter(
+      # remove final period because no input is needed for the next time step
+      period != max(period)
+    ) |>
+    dplyr::summarise(
+      node_inflow = sum(value),
+      .by = c(
+        period_id,
+        months_waited_id
+      )
+    )
+
+  inflow <- bind_rows(
+    referrals,
+    incomplete_at_previous_timeperiod
+  )
+
+  # calculate removals by completion at each node
+  complete_counts <- data |>
+    filter(
+      type == "Complete"
+    ) |>
+    select(
+      months_waited_id,
+      period_id,
+      treatments = "value"
+    )
+
+  # calculate the counts of those waiting at the same node
+  incomplete_counts <- data |>
+    filter(
+      type == "Incomplete"
+    ) |>
+    select(
+      months_waited_id,
+      period_id,
+      waiting_same_node = "value"
+    )
+
+  transitions <- inflow |>
+    left_join(
+      complete_counts,
+      by = join_by(
+        months_waited_id,
+        period_id
+      )
+    ) |>
+    left_join(
+      incomplete_counts,
+      by = join_by(
+        months_waited_id,
+        period_id
+      )
+    )
+
+  return(transitions)
+}
+
+#' @param incomplete_counts numeric; vector of incomplete counts
+redistribute_incompletes <- function(incomplete_counts) {
+
+  if (sum(incomplete_counts) < 0)
+    stop("not possible to redistribute incompletes because the sum of incompletes is negative")
+
+  while (any(incomplete_counts < 0)) {
+    # total negative counts
+    total_negatives <- sum(incomplete_counts[incomplete_counts < 0])
+    # tmp2a<-sum(tmp_incompletes[tmp_incompletes<0])
+
+    # force the negatives to 0
+    incomplete_counts[incomplete_counts < 0] <- 0
+
+    # tmp_incompletes[which(tmp_incompletes<0)]<-0
+
+    # count of positive values to proportion the total incomplete counts over
+    positive_stocks <- length(
+      incomplete_counts[incomplete_counts > 0]
+    )
+
+    # adjustment
+    adjustment <- total_negatives / positive_stocks
+
+    # adjust positive stocks to account for negative incompletes
+    incomplete_counts[incomplete_counts > 0] <-
+      incomplete_counts[incomplete_counts > 0] + adjustment
+
+    # tmp_incompletes[which(tmp_incompletes>0)]<-tmp_incompletes[which(tmp_incompletes>0)]+tmp2a/length(tmp_incompletes[which(tmp_incompletes>0)])
+  }
+
+  return(incomplete_counts)
+}
+
+# string functions --------------------------------------------------------
+
+convert_months_waited_to_id <- function(months_waited, max_months_waited) {
+  months_waited <- as.character(months_waited)
+
+  # change "<1" to "0"
+  months_waited[!grepl("^[0-9]", months_waited)] <- "0"
+
+  # replace all values with the first numeric value, eg, "10-11" will become 10
+  months_waited <- as.numeric(
+    sub("\\D*(\\d+).*", "\\1", months_waited)
+  )
+
+  # control the max value of months waited
+  months_waited[months_waited > max_months_waited] <- max_months_waited
+
+  return(months_waited)
 }
