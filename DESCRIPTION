@@ -1,6 +1,6 @@
 Package: NHSRtt
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Scenario plan for future elective scenarios using public NHS data
 Version: 0.1.0
 Author: Who wrote it
 Maintainer: The package maintainer <yourself@somewhere.net>
@@ -12,6 +12,7 @@ LazyData: true
 RoxygenNote: 7.3.2
 Imports: 
     dplyr,
+    lubridate,
     purrr,
     readxl,
     rvest,
