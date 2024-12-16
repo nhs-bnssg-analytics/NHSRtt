@@ -3,7 +3,7 @@
 #' webpage
 #'
 #' @param url string; url of the NHS Referral to Treatment (RTT) Waiting Times
-#' @param date_start date; start date (earliest date is 1st April 2011, but the
+#' @param date_start date; start date (earliest date is 1st April 2016, but the
 #'   default is 1st April 2019)
 #' @param date_end; date; end date (defaults to "today")
 #' @param show_progress logical; show progress of downloading and processing
@@ -42,6 +42,14 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
   # calculate start year for financial year for date_start
   month_start <- as.numeric(format(date_start, "%m"))
   year_start <- as.numeric(format(date_start, "%Y"))
+
+  if (month_start == 1) {
+    month_start <- 12
+    year_start <- year_start - 1
+  } else {
+    month_start <- month_start - 1
+  }
+
   if (month_start < 4) {
     year_start <- year_start - 1
   }
@@ -149,7 +157,6 @@ identify_n_skip_rows <- function(filepath, sheet = "Provider") {
 #' @importFrom readxl read_excel
 #' @importFrom dplyr select mutate rename case_when summarise left_join join_by
 #' @importFrom tidyr pivot_longer
-#' @importFrom stringr str_extract
 #' @importFrom lubridate ceiling_date month year
 #' @return a tidy tibble
 tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
