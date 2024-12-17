@@ -24,7 +24,8 @@
 #' }
 #'
 
-get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/", date_start = as.Date("2019-04-01"), date_end = Sys.Date(), show_progress = FALSE) {
+get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
+                         date_start = as.Date("2019-04-01"), date_end = Sys.Date(), show_progress = FALSE) {
 
   # check date inputs
   if (!inherits(date_start, "Date")) stop("date_start needs to be a date format")
@@ -86,7 +87,7 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
 
   dts <- as.Date(paste0("01", substr_right(names(xl_files), 5)), "%d%b%y")
 
-  xl_files <- xl_files[dts >= date_start]
+  xl_files <- xl_files[dplyr::between(dts, date_start, date_end)]
 
   # update on progress
   if (show_progress == TRUE) cat("Downloading data...\n")

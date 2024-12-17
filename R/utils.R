@@ -277,12 +277,27 @@ redistribute_incompletes <- function(incomplete_counts) {
 }
 
 # string functions --------------------------------------------------------
-
+#' convert the string version of months waited to the numeric id version
+#' @param months_waited string; vector with format, by example "2-3"
+#' @param max_months_waited integer; the maximum number of months to group
+#'   patients waiting times by for the analysis. Data are published up to 104
+#'   weeks, so 24 is likely to be the maximum useful value for this argument.
+#' @export
+#'
+#' @example
+#' mnths_waited <- c("<1", "1-2", "2-3", "3-4", "4-5", "5+")
+#' convert_months_waited_to_id(
+#'   months_waited = mnths_waited,
+#'   max_months_waited = 3
+#' )
 convert_months_waited_to_id <- function(months_waited, max_months_waited) {
   months_waited <- as.character(months_waited)
 
   # change "<1" to "0"
-  months_waited[!grepl("^[0-9]", months_waited)] <- "0"
+  months_waited[grepl("^<", months_waited)] <- "0"
+
+  # change ">x" to "x"
+  months_waited[grepl("^>", months_waited)] <- gsub(">", "", months_waited[grepl("^>", months_waited)])
 
   # replace all values with the first numeric value, eg, "10-11" will become 10
   months_waited <- as.numeric(
