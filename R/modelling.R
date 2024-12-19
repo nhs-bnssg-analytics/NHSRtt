@@ -17,7 +17,7 @@
 #' @param full_breakdown logical; include a full breakdown of monthly
 #'   transitions by period. FALSE provides the parameters by months_waited_id
 #'   only
-#' @importFrom dplyr setdiff
+#' @importFrom dplyr setdiff across summarise
 #' @importFrom rlang .data
 #' @export
 #'
@@ -252,13 +252,13 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #'   incompletes = incomp,
 #'   completes = comp,
 #'   max_months_waited = max_months,
-#'   adjust_renege_params = TRUE
+#'   redistribute_m0_reneges = TRUE
 #' )
 #'
 #' set.seed(3)
 #' future_capacity <- sample(300:500, 4, replace = TRUE)
 #' future_referrals <- sample(300:500, 4, replace = TRUE)
-#' incompletes_t0 <- tibble(
+#' incompletes_t0 <- dplyr::tibble(
 #'   months_waited_id = c(0, seq_len(max_months)),
 #'   incompletes = sample(
 #'     100:200,
@@ -271,8 +271,8 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #'   capacity_projections = future_capacity,
 #'   referrals_projections = future_referrals,
 #'   incomplete_pathways = incompletes_t0,
-#'   reneg_capacity_params = params,
-#'   man_months_waited = max_months
+#'   renege_capacity_params = params,
+#'   max_months_waited = max_months
 #' )
 apply_params_to_projections <- function(capacity_projections, referrals_projections,
                                         incomplete_pathways = NULL, renege_capacity_params,
