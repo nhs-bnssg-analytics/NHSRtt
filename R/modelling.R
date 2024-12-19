@@ -18,6 +18,7 @@
 #'   transitions by period. FALSE provides the parameters by months_waited_id
 #'   only
 #' @importFrom dplyr setdiff
+#' @importFrom rlang .data
 #' @export
 #'
 #' @examples
@@ -136,7 +137,8 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
       )
     ) |>
     mutate(
-      reneges = node_inflow - treatments - waiting_same_node
+      reneges = .data$node_inflow -
+        .data$treatments - .data$waiting_same_node
     ) |>
     # remove the earliest period_id as there is only information for
     # months_waited_id = 0
@@ -146,7 +148,7 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     # input data, so it could potentially be considered when calculating the
     # parameters
     filter(
-      period_id != min(period_id)
+      period_id != min(.data$period_id)
     )
 
 
@@ -155,12 +157,12 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     reneg_cap <- reneg_cap |>
       mutate(
         node_inflow = case_when(
-          months_waited_id == 0 & reneges < 0 ~ node_inflow + abs(reneges),
-          .default = node_inflow
+          .data$months_waited_id == 0 & .data$reneges < 0 ~ .data$node_inflow + abs(.data$reneges),
+          .default = .data$node_inflow
         ),
         reneges = case_when(
-          months_waited_id == 0 & reneges < 0 ~ 0,
-          .default = reneges
+          .data$months_waited_id == 0 & .data$reneges < 0 ~ 0,
+          .default = .data$reneges
         )
       )
   }
@@ -169,24 +171,24 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
   # timestep calcs of reneges and capacity parameters
   reneg_cap <- reneg_cap |>
     mutate(
-      renege_param = reneges / node_inflow,
-      capacity_param = treatments / node_inflow
+      renege_param = .data$reneges / .data$node_inflow,
+      capacity_param = .data$treatments / .data$node_inflow
     )
 
   if (!isTRUE(full_breakdown)) {
     reneg_cap <- reneg_cap |>
       summarise(
         across(
-          c(renege_param, capacity_param),
+          c(.data$renege_param, .data$capacity_param),
           ~ mean(.x, na.rm = TRUE)
         ),
-        .by = months_waited_id
+        .by = .data$months_waited_id
       )
 
-    if (any(reneg_cap |> pull(renege_param) < 0))
+    if (any(reneg_cap |> pull(.data$renege_param) < 0))
       warning("negative renege parameters present, investigate raw data")
 
-    if (any(reneg_cap |> pull(capacity_param) < 0))
+    if (any(reneg_cap |> pull(.data$capacity_param) < 0))
       warning("negative capacity parameters present, investigate raw data")
   }
 
@@ -216,6 +218,11 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #' @param max_months_waited integer; the maximum number of months to group
 #'   patients waiting times by for the analysis. Data are published up to 104
 #'   weeks, so 24 is likely to be the maximum useful value for this argument.
+#'
+#' @importFrom rlang .data
+#' @importFrom dplyr distinct bind_rows left_join tibble join_by mutate
+#'   case_when summarise select
+#' @importFrom tidyr replace_na
 #'
 #' @return a tibble with fields for period_id, months_waited_id,
 #'   calculated_treatments, reneges, incompletes and input_treatments
@@ -304,23 +311,12 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
     ) |>
       dplyr::mutate(
         incompletes = tidyr::replace_na(
-          incompletes,
+          .data$incompletes,
           0
         )
       )
 
   }
-
-
-  # projected_referrals_capacity <- tibble(
-  #   capacity = capacity_projections#,
-  #   # referrals = referrals_projections
-  # ) |>
-  #   mutate(
-  #     period_id = seq_len(
-  #       length(capacity_projections)
-  #     )
-  #   )
 
   projections <- tibble(
     period_id = numeric(0),
@@ -336,15 +332,15 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
       mutate(
         period_id = period,
         months_waited_id = case_when(
-          months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
-          .default = months_waited_id + 1
+          .data$months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
+          .default = .data$months_waited_id + 1
         )
       ) |>
       dplyr::summarise(
-        node_inflow = sum(incompletes),
+        node_inflow = sum(.data$incompletes),
         .by = c(
-          period_id,
-          months_waited_id
+          .data$period_id,
+          .data$months_waited_id
         )
       ) |>
       # add in referrals
@@ -367,23 +363,25 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         )
       ) |>
       mutate(
-        reneges = renege_param * node_inflow,
-        input_treatments = capacity,
-        capacity_numerator = capacity_param * node_inflow,
-        capacity_denominator = sum(capacity_numerator),
-        calculated_treatments = input_treatments * capacity_numerator / capacity_denominator,
-        incompletes = node_inflow - calculated_treatments - reneges,
+        reneges = .data$renege_param * .data$node_inflow,
+        input_treatments = .data$capacity,
+        capacity_numerator = .data$capacity_param * .data$node_inflow,
+        capacity_denominator = sum(.data$capacity_numerator),
+        calculated_treatments = .data$input_treatments *
+          .data$capacity_numerator / .data$capacity_denominator,
+        incompletes = .data$node_inflow -
+          .data$calculated_treatments - .data$reneges,
         # redistribute the negative incompletes into the positive incompletes so
         # there are no negative incompletes in a timestep
-        incompletes = redistribute_incompletes(incompletes)
+        incompletes = redistribute_incompletes(.data$incompletes)
       )
 
 # browser()
     # recreate the incomplete_pathways tibble for the next period
     incomplete_pathways <- transitions |>
       distinct(
-        months_waited_id,
-        incompletes
+        .data$months_waited_id,
+        .data$incompletes
       )
 
     # create output for timestep

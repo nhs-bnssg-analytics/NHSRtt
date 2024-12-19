@@ -21,6 +21,7 @@ Imports:
     lubridate,
     purrr,
     readxl,
+    rlang,
     rvest,
     tidyr,
     xml2

@@ -156,16 +156,17 @@ identify_n_skip_rows <- function(filepath, sheet = "Provider") {
 #' @param n_skip number of rows to skip before reading in main table from sheet
 #' @param excel_filepath string; file path to the file location
 #' @importFrom readxl read_excel
-#' @importFrom dplyr select mutate rename case_when summarise left_join join_by
+#' @importFrom dplyr select mutate rename case_when summarise left_join join_by starts_with ends_with any_of
 #' @importFrom tidyr pivot_longer
 #' @importFrom lubridate ceiling_date month year
+#' @importFrom rlang .data
 #' @return a tidy tibble
 tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 
   mnth <- substring(
-    excel_filepath,
-    first = regexpr("[[[:alpha:]]{3}[0-9]{2}", excel_filepath),
-    last = regexpr("[[[:alpha:]]{3}[0-9]{2}", excel_filepath) + 4
+    basename(excel_filepath),
+    first = regexpr("[[[:alpha:]]{3}[0-9]{2}", basename(excel_filepath)),
+    last = regexpr("[[[:alpha:]]{3}[0-9]{2}", basename(excel_filepath)) + 4
   )
   mnth <- as.Date(paste0("01", mnth), "%d%b%y")
 
@@ -205,29 +206,31 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
       dplyr::mutate(
         # extract the first number from the weeks waited string
         fewest_weeks_waited = as.numeric(
-          sub("\\D*(\\d+).*", "\\1", weeks_waited)
+          sub("\\D*(\\d+).*", "\\1", .data$weeks_waited)
         ),
         # calculate the end date of the week relative to the end of the month for
         # the reporting period
         week_end = (lubridate::ceiling_date(
-          x = period,
+          x = .data$period,
           unit = "months"
-        ) - 1) - (7 * fewest_weeks_waited)
+        ) - 1) - (7 * .data$fewest_weeks_waited)
       )
 
     monthly_proportions <- month_attribution_lkp(
       rtt[["week_end"]]
     ) |>
       dplyr::mutate(
-        months_waited = (lubridate::month(mnth) - lubridate::month(wait_start_month)) +
-          (12 * (lubridate::year(mnth) - lubridate::year(wait_start_month))),
+        months_waited = (lubridate::month(.data$mnth) -
+                           lubridate::month(.data$wait_start_month)) +
+          (12 * (lubridate::year(.data$mnth) -
+                   lubridate::year(.data$wait_start_month))),
         months_waited = dplyr::case_when(
-          months_waited == 0 ~ "<1",
-          months_waited >= 24 ~ "24+",
-          .default = paste(months_waited, months_waited + 1, sep = "-")
+          .data$months_waited == 0 ~ "<1",
+          .data$months_waited >= 24 ~ "24+",
+          .default = paste(.data$months_waited, .data$months_waited + 1, sep = "-")
         ),
         months_waited = factor(
-          months_waited,
+          .data$months_waited,
           levels = c("<1", paste(0:23, 1:24, sep = "-"), "24+")
         )
       )
@@ -240,7 +243,7 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
         )
       ) |>
       dplyr::summarise(
-        value = sum(value * month_weight),
+        value = sum(.data$value * .data$month_weight),
         .by = c(
           trust,
           specialty,

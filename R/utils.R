@@ -98,6 +98,7 @@ download_temp_file <- function(excel_url, filename) {
 #' @importFrom lubridate mday floor_date %m-%
 #' @importFrom dplyr tibble case_when mutate filter
 #' @importFrom tidyr pivot_longer
+#' @importFrom rlang .data
 #'
 #' @return a tibble of week_end, wait_start_month, month_weight where week_end
 #'   are the dates provided, wait_start_month is the start of the month that the
@@ -110,10 +111,10 @@ month_attribution_lkp <- function(week_end_dates) {
     # if 7 days or more fall in the month, give it the value of 7, otherwise it
     # is the day of the month
     month_1 = case_when(
-      lubridate::mday(week_end) > 7 ~ 7,
-      .default = lubridate::mday(week_end)
+      lubridate::mday(.data$week_end) > 7 ~ 7,
+      .default = lubridate::mday(.data$week_end)
     ),
-    month_0 = 7 - month_1
+    month_0 = 7 - .data$month_1
   ) |>
     # create a longer table with 2 records per week_end date with a record per
     # proportion to apply to current month and previous month
@@ -123,18 +124,18 @@ month_attribution_lkp <- function(week_end_dates) {
       values_to = "month_weight"
     ) |>
     dplyr::mutate(
-      month_weight = month_weight / 7,
+      month_weight = .data$month_weight / 7,
       wait_start_month = case_when(
-        wait_start_month == "month_1" ~
-          lubridate::floor_date(week_end, unit = "months"),
+        .data$wait_start_month == "month_1" ~
+          lubridate::floor_date(.data$week_end, unit = "months"),
         .default = lubridate::floor_date(
-          week_end %m-% months(1), unit = "months"
+          .data$week_end %m-% months(1), unit = "months"
         ),
       )
     ) |>
     # remove record where month_weight is 0
     dplyr::filter(
-      month_weight != 0
+      .data$month_weight != 0
     )
 
   return(all_dates)
@@ -168,6 +169,8 @@ month_attribution_lkp <- function(week_end_dates) {
 #' @param max_months_waited integer; the maximum number of months to group
 #'   patients waiting times by for the analysis. Data are published up to 104
 #'   weeks, so 24 is likely to be the maximum useful value for this argument
+#'
+#' @param importFrom rlang .data
 #' @return a tibble with fields for months_waited_id, period_id, node_inflow,
 #'   waiting_same_node and treatments. These represent all the counts being
 #'   moved on a single time step
@@ -178,7 +181,7 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
 
   referrals <- referrals |>
     dplyr::filter(
-      period_id > 0 # not need for input at timestep t-1
+      .data$period_id > 0 # not need for input at timestep t-1
     ) |>
     mutate(
       months_waited_id = 0
@@ -191,21 +194,21 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
 
   incomplete_at_previous_timeperiod <- incompletes |>
     mutate(
-      period_id = period_id + 1,
+      period_id = .data$period_id + 1,
       months_waited_id = case_when(
-        months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
-        .default = months_waited_id + 1
+        .data$months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
+        .default = .data$months_waited_id + 1
       )
     ) |>
     filter(
       # remove final period because no input is needed for the next time step
-      period_id != max(period_id)
+      period_id != max(.data$period_id)
     ) |>
     dplyr::summarise(
-      node_inflow = sum(incompletes),
+      node_inflow = sum(.data$incompletes),
       .by = c(
-        period_id,
-        months_waited_id
+        .data$period_id,
+        .data$months_waited_id
       )
     )
 
@@ -217,8 +220,8 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
   # calculate the counts of those waiting at the same node
   incomplete_counts <- incompletes |>
     select(
-      months_waited_id,
-      period_id,
+      "months_waited_id",
+      "period_id",
       waiting_same_node = "incompletes"
     )
 

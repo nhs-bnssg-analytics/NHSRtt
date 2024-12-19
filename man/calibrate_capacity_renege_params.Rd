@@ -10,7 +10,8 @@ calibrate_capacity_renege_params(
   incompletes,
   completes,
   max_months_waited = 12,
-  redistribute_m0_reneges
+  redistribute_m0_reneges,
+  full_breakdown = FALSE
 )
 }
 \arguments{
