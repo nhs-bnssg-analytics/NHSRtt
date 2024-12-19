@@ -170,7 +170,7 @@ month_attribution_lkp <- function(week_end_dates) {
 #'   patients waiting times by for the analysis. Data are published up to 104
 #'   weeks, so 24 is likely to be the maximum useful value for this argument
 #'
-#' @param importFrom rlang .data
+#' @importFrom rlang .data
 #' @return a tibble with fields for months_waited_id, period_id, node_inflow,
 #'   waiting_same_node and treatments. These represent all the counts being
 #'   moved on a single time step

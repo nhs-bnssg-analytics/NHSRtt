@@ -2,3 +2,4 @@
 ^\.Rproj\.user$
 ad_hoc
 ^LICENSE\.md$
+^README\.Rmd$

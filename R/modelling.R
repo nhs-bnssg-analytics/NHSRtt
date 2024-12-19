@@ -43,7 +43,7 @@
 #' params <- calibrate_capacity_renege_params(
 #'   referrals = refs,
 #'   incompletes = incomp,
-#'   compltes = comp,
+#'   completes = comp,
 #'   max_months_waited = max_months,
 #'   redistribute_m0_reneges = TRUE
 #' )
@@ -250,7 +250,7 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #' params <- calibrate_capacity_renege_params(
 #'   referrals = refs,
 #'   incompletes = incomp,
-#'   compltes = comp,
+#'   completes = comp,
 #'   max_months_waited = max_months,
 #'   adjust_renege_params = TRUE
 #' )

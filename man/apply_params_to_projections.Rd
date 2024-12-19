@@ -68,7 +68,7 @@ comp <- create_dummy_data(
 params <- calibrate_capacity_renege_params(
   referrals = refs,
   incompletes = incomp,
-  compltes = comp,
+  completes = comp,
   max_months_waited = max_months,
   adjust_renege_params = TRUE
 )

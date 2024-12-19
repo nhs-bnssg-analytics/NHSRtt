@@ -26,8 +26,6 @@ number of months waited for each period}
 \item{max_months_waited}{integer; the maximum number of months to group
 patients waiting times by for the analysis. Data are published up to 104
 weeks, so 24 is likely to be the maximum useful value for this argument}
-
-\item{importFrom}{rlang .data}
 }
 \value{
 a tibble with fields for months_waited_id, period_id, node_inflow,
