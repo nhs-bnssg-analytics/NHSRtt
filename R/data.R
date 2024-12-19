@@ -220,9 +220,9 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
       rtt[["week_end"]]
     ) |>
       dplyr::mutate(
-        months_waited = (lubridate::month(.data$mnth) -
+        months_waited = (lubridate::month(mnth) -
                            lubridate::month(.data$wait_start_month)) +
-          (12 * (lubridate::year(.data$mnth) -
+          (12 * (lubridate::year(mnth) -
                    lubridate::year(.data$wait_start_month))),
         months_waited = dplyr::case_when(
           .data$months_waited == 0 ~ "<1",
