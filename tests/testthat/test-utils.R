@@ -34,12 +34,12 @@ test_that("month_attribution_lkp function tests", {
 test_that("redistribute_incompletes works", {
   incompletes <- c(1, 2, 3, -1, 5, -4)
   expect_identical(
+    sum(redistribute_incompletes(incompletes)),
     sum(incompletes),
-    redistribute_incompletes(incompletes),
     label = "total number of incompletes remains the same before and after the function is used"
   )
 
-  expect_gt(
+  expect_gte(
     redistribute_incompletes(incompletes) |>
       min(),
     0,

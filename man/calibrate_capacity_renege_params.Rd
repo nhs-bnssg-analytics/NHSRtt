@@ -5,14 +5,65 @@
 \title{calculate the capacity and renege parameters over the period of data per
 month waited}
 \usage{
-calibrate_capacity_renege_params(data, max_months_waited = 12)
+calibrate_capacity_renege_params(
+  referrals,
+  incompletes,
+  completes,
+  max_months_waited = 12,
+  redistribute_m0_reneges
+)
 }
 \arguments{
+\item{referrals}{data frame with two columns; period_id and referrals. This
+represents the count of referrals in each period}
+
+\item{incompletes}{data from with three columns; period_id, months_waited_id,
+and incompletes. This represents the count of incomplete pathways by the
+number of months waited for each period}
+
+\item{completes}{data from with three columns; period_id, months_waited_id,
+and treatments. This represents the count of completed pathways by the
+number of months waited for each period}
+
 \item{max_months_waited}{integer; the maximum number of months to group
 patients waiting times by for the analysis. Data are published up to 104
 weeks, so 24 is likely to be the maximum useful value for this argument.}
+
+\item{redistribute_m0_reneges}{logical; should negative renege counts in the
+zero months waited stock be reassigned to referrals?}
+
+\item{full_breakdown}{logical; include a full breakdown of monthly
+transitions by period. FALSE provides the parameters by months_waited_id
+only}
 }
 \description{
 calculate the capacity and renege parameters over the period of data per
 month waited
+}
+\examples{
+max_months <- 4
+refs <- create_dummy_data(
+  type = "referrals",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+incomp <- create_dummy_data(
+  type = "incompletes",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+
+comp <- create_dummy_data(
+  type = "completes",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+
+params <- calibrate_capacity_renege_params(
+  referrals = refs,
+  incompletes = incomp,
+  compltes = comp,
+  max_months_waited = max_months,
+  redistribute_m0_reneges = TRUE
+)
 }

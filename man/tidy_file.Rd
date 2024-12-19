@@ -7,6 +7,8 @@
 tidy_file(excel_filepath, sheet = "Provider", n_skip)
 }
 \arguments{
+\item{excel_filepath}{string; file path to the file location}
+
 \item{sheet}{string; sheet name}
 
 \item{n_skip}{number of rows to skip before reading in main table from sheet}

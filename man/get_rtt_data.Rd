@@ -18,10 +18,10 @@ get_rtt_data(
 \item{date_start}{date; start date (earliest date is 1st April 2016, but the
 default is 1st April 2019)}
 
+\item{date_end}{date; end date (defaults to "today")}
+
 \item{show_progress}{logical; show progress of downloading and processing
 files. Defaults to false}
-
-\item{date_end;}{date; end date (defaults to "today")}
 }
 \value{
 a tibble with fields for trust, specialty, period, type,

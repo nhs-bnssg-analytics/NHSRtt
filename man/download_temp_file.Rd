@@ -8,6 +8,8 @@ download_temp_file(excel_url, filename)
 }
 \arguments{
 \item{excel_url}{sting; url of the file. Must have an xlsx or xls extension}
+
+\item{filename}{string; name of file}
 }
 \value{
 filepath to where the temporary file is stored
