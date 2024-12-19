@@ -8,6 +8,7 @@
 #' @return named vector with urls linked to within the provided url
 #' @importFrom xml2 read_html
 #' @importFrom rvest html_elements html_attr html_text
+#' @importFrom stats setNames
 #'
 
 obtain_links <- function(url) {
@@ -22,7 +23,7 @@ obtain_links <- function(url) {
     rvest::html_text() |>
     trimws()
 
-  links <- setNames(
+  links <- stats::setNames(
     links,
     nm = link_text
   )
@@ -46,7 +47,9 @@ substr_right <- function(x, n){
 #' Download a file from a url to a temporary file
 #'
 #' @param excel_url sting; url of the file. Must have an xlsx or xls extension
+#' @param filename string; name of file
 #' @importFrom tools file_ext
+#' @importFrom utils download.file
 #' @return filepath to where the temporary file is stored
 download_temp_file <- function(excel_url, filename) {
   temporary_directory <- tempdir()
@@ -141,42 +144,52 @@ month_attribution_lkp <- function(week_end_dates) {
 
 #' Calculates the flow from each stock at each timestep
 #'
-#' @detail for each timestep, the stock is calculated as the current count of
-#'   patients waiting at that timestep plus the inflow (via referrals or
-#'   incomplete pathways from previous timestep) minus outflow (pathways have
-#'   been completed or reneges, which are deduced from the other flows). This
-#'   stock is divided into "months waited", and patients with incomplete
-#'   pathways at the end of the timestep are incremented up to an additional
-#'   month's waiting time
-#' @param data data frame with fields called months_waited_id, type, period_id,
-#'   value. Type can take the values "Referrals", "Incomplete" and "Complete".
-#'   Referrals will only have "months_waited_id" = 0. period_id is an integer
-#'   representing the chronology of the data.
+#' @details for each timestep, the stock is calculated as the current count of
+#' patients waiting at that timestep plus the inflow (via referrals or
+#' incomplete pathways from previous timestep) minus outflow (pathways have been
+#' completed or reneges, which are deduced from the other flows). This stock is
+#' divided into "months waited", and patients with incomplete pathways at the
+#' end of the timestep are incremented up to an additional month's waiting time
+#'
+#' For each of the data frames supplied, the period_id and the months_waited_id
+#' fields should be numeric/integers. period_id is an integer representing the
+#' chronology of the data, and months_waited_id is a numeric representation of
+#' the months waited, where 0 represents 0 to 1 month, and 5 represents 5 to 6
+#' months.
+#'
+#' @param referrals data frame with two columns; period_id and referrals. This
+#'   represents the count of referrals in each period
+#' @param incompletes data from with three columns; period_id, months_waited_id,
+#'   and incompletes. This represents the count of incomplete pathways by the
+#'   number of months waited for each period
+#' @param completes  data from with three columns; period_id, months_waited_id,
+#'   and treatments. This represents the count of completed pathways by the
+#'   number of months waited for each period
 #' @param max_months_waited integer; the maximum number of months to group
 #'   patients waiting times by for the analysis. Data are published up to 104
-#'   weeks, so 24 is likely to be the maximum useful value for this argument.
-#' @return
+#'   weeks, so 24 is likely to be the maximum useful value for this argument
+#' @return a tibble with fields for months_waited_id, period_id, node_inflow,
+#'   waiting_same_node and treatments. These represent all the counts being
+#'   moved on a single time step
 #'
-calculate_timestep_transitions <- function(data, max_months_waited) {
+calculate_timestep_transitions <- function(referrals, incompletes, completes, max_months_waited) {
   # inflows at each time step (period) are a combination of referrals in the
-  # period and incomplete counts from the previous timestep
+  # period and incomplete counts from the previous time step
 
-  referrals <- data |>
+  referrals <- referrals |>
     dplyr::filter(
-      months_waited_id == 0,
-      type == "Referrals",
       period_id > 0 # not need for input at timestep t-1
+    ) |>
+    mutate(
+      months_waited_id = 0
     ) |>
     dplyr::select(
       "period_id",
       "months_waited_id",
-      node_inflow = "value"
+      node_inflow = "referrals"
     )
 
-  incomplete_at_previous_timeperiod <- data |>
-    filter(
-      type == "Incomplete"
-    ) |>
+  incomplete_at_previous_timeperiod <- incompletes |>
     mutate(
       period_id = period_id + 1,
       months_waited_id = case_when(
@@ -186,10 +199,10 @@ calculate_timestep_transitions <- function(data, max_months_waited) {
     ) |>
     filter(
       # remove final period because no input is needed for the next time step
-      period != max(period)
+      period_id != max(period_id)
     ) |>
     dplyr::summarise(
-      node_inflow = sum(value),
+      node_inflow = sum(incompletes),
       .by = c(
         period_id,
         months_waited_id
@@ -201,31 +214,17 @@ calculate_timestep_transitions <- function(data, max_months_waited) {
     incomplete_at_previous_timeperiod
   )
 
-  # calculate removals by completion at each node
-  complete_counts <- data |>
-    filter(
-      type == "Complete"
-    ) |>
-    select(
-      months_waited_id,
-      period_id,
-      treatments = "value"
-    )
-
   # calculate the counts of those waiting at the same node
-  incomplete_counts <- data |>
-    filter(
-      type == "Incomplete"
-    ) |>
+  incomplete_counts <- incompletes |>
     select(
       months_waited_id,
       period_id,
-      waiting_same_node = "value"
+      waiting_same_node = "incompletes"
     )
 
   transitions <- inflow |>
     left_join(
-      complete_counts,
+      completes,
       by = join_by(
         months_waited_id,
         period_id
@@ -239,9 +238,12 @@ calculate_timestep_transitions <- function(data, max_months_waited) {
       )
     )
 
+
   return(transitions)
 }
 
+#' Redistribute the counts of incompletes within a vector where they are
+#' negative into the positive values
 #' @param incomplete_counts numeric; vector of incomplete counts
 redistribute_incompletes <- function(incomplete_counts) {
 
@@ -276,6 +278,10 @@ redistribute_incompletes <- function(incomplete_counts) {
   return(incomplete_counts)
 }
 
+adjust_referrals <- function(variables) {
+
+}
+
 # string functions --------------------------------------------------------
 #' convert the string version of months waited to the numeric id version
 #' @param months_waited string; vector with format, by example "2-3"
@@ -284,7 +290,8 @@ redistribute_incompletes <- function(incomplete_counts) {
 #'   weeks, so 24 is likely to be the maximum useful value for this argument.
 #' @export
 #'
-#' @example
+#' @examples
+#'
 #' mnths_waited <- c("<1", "1-2", "2-3", "3-4", "4-5", "5+")
 #' convert_months_waited_to_id(
 #'   months_waited = mnths_waited,

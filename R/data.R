@@ -5,7 +5,7 @@
 #' @param url string; url of the NHS Referral to Treatment (RTT) Waiting Times
 #' @param date_start date; start date (earliest date is 1st April 2016, but the
 #'   default is 1st April 2019)
-#' @param date_end; date; end date (defaults to "today")
+#' @param date_end date; end date (defaults to "today")
 #' @param show_progress logical; show progress of downloading and processing
 #'   files. Defaults to false
 #'
@@ -23,7 +23,6 @@
 #' )
 #' }
 #'
-
 get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
                          date_start = as.Date("2019-04-01"), date_end = Sys.Date(), show_progress = FALSE) {
 
@@ -155,6 +154,7 @@ identify_n_skip_rows <- function(filepath, sheet = "Provider") {
 #'
 #' @inheritParams identify_n_skip_rows
 #' @param n_skip number of rows to skip before reading in main table from sheet
+#' @param excel_filepath string; file path to the file location
 #' @importFrom readxl read_excel
 #' @importFrom dplyr select mutate rename case_when summarise left_join join_by
 #' @importFrom tidyr pivot_longer
@@ -264,6 +264,12 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 #'   patients waiting times by for the analysis. Data are published up to 104
 #'   weeks, so 24 is likely to be the maximum useful value for this argument.
 #' @param number_periods integer; the intended number of periods in the dataset
+#' @param referral_values integer: vector of values that are sampled from for
+#'   the count of referrals at each time step
+#' @param incomplete_values integer: vector of values that are sampled from for
+#'   the count of incomplete pathways at each time step
+#' @param treatment_values integer: vector of values that are sampled from for
+#'   the count of completed pathways at each time step
 #' @param seed seed to generate the random data from
 #'
 #' @importFrom dplyr tibble mutate
@@ -273,13 +279,17 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 #'   months_waited_id and treatments/incompletes, depending on the type value
 #' @export
 #'
-#' @example
+#' @examples
 #' create_dummy_data(
 #'   type = "referrals",
 #'   max_months_waited = 4,
 #'   number_period = 6
 #' )
-create_dummy_data <- function(type, max_months_waited, number_periods, seed = 123) {
+create_dummy_data <- function(type, max_months_waited, number_periods,
+                              referral_values = 500:700,
+                              incomplete_values = 500:700,
+                              treatment_values = 500:700,
+                              seed = 123) {
   type <- match.arg(
     type,
     c("referrals", "completes", "incompletes")
@@ -294,7 +304,7 @@ create_dummy_data <- function(type, max_months_waited, number_periods, seed = 12
   if (type == "referrals") {
     out <- dplyr::tibble(
       period_id = periods,
-      referrals = sample(500:700, length(periods), replace = TRUE)
+      referrals = sample(referral_values, length(periods), replace = TRUE)
     )
   } else {
     months <- c(
@@ -310,14 +320,16 @@ create_dummy_data <- function(type, max_months_waited, number_periods, seed = 12
       out <- out |>
         dplyr::mutate(
           incompletes = sample(
-            500:700, length(periods) * length(months), replace = TRUE
+            500:700, length(periods) * length(months),
+            replace = TRUE
           )
         )
     } else if (type == "completes") {
       out <- out |>
         mutate(
           treatments = sample(
-            500:700, length(periods) * length(months), replace = TRUE
+            500:700, length(periods) * length(months),
+            replace = TRUE
           )
         )
     }

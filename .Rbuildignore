@@ -1,2 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+ad_hoc
+vignettes
+^LICENSE\.md$

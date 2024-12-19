@@ -10,7 +10,8 @@ apply_params_to_projections(
   capacity_projections,
   referrals_projections,
   incomplete_pathways = NULL,
-  regen_capacity_params
+  renege_capacity_params,
+  max_months_waited
 )
 }
 \arguments{
@@ -26,14 +27,69 @@ waited group of interest), and incompletes (the count of the number of
 incomplete pathways) representing the count of incomplete pathways at
 timestep 0 (to initialise the model with)}
 
-\item{regen_capacity_params}{tibble; three column data frame or tibble, with
+\item{renege_capacity_params}{tibble; three column data frame or tibble, with
 fields called months_waited_id (taking values 0 to the maximum months
-waited group of interest), and fields called cap_param and renege_param,
-which are outputs from the function
+waited group of interest), and fields called capacity_param and
+renege_param, which are outputs from the function
 \code{calibrate_capacity_renege_params()}}
+
+\item{max_months_waited}{integer; the maximum number of months to group
+patients waiting times by for the analysis. Data are published up to 104
+weeks, so 24 is likely to be the maximum useful value for this argument.}
+}
+\value{
+a tibble with fields for period_id, months_waited_id,
+  calculated_treatments, reneges, incompletes and input_treatments
 }
 \description{
 Apply the months waited parameters for renege and capacity to projections and
 capacity and referrals If needed, or if validating your parameters, include
 projections for incomplete pathways per period
+}
+\examples{
+max_months <- 4
+refs <- create_dummy_data(
+  type = "referrals",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+incomp <- create_dummy_data(
+  type = "incompletes",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+
+comp <- create_dummy_data(
+  type = "completes",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+
+params <- calibrate_capacity_renege_params(
+  referrals = refs,
+  incompletes = incomp,
+  compltes = comp,
+  max_months_waited = max_months,
+  adjust_renege_params = TRUE
+)
+
+set.seed(3)
+future_capacity <- sample(300:500, 4, replace = TRUE)
+future_referrals <- sample(300:500, 4, replace = TRUE)
+incompletes_t0 <- tibble(
+  months_waited_id = c(0, seq_len(max_months)),
+  incompletes = sample(
+    100:200,
+    length(c(0, seq_len(max_months))),
+    replace = TRUE
+   )
+)
+
+projections <- apply_params_to_projections(
+  capacity_projections = future_capacity,
+  referrals_projections = future_referrals,
+  incomplete_pathways = incompletes_t0,
+  reneg_capacity_params = params,
+  man_months_waited = max_months
+)
 }
