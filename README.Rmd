@@ -16,6 +16,9 @@ knitr::opts_chunk$set(
 # NHSRtt
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/nhs-bnssg-analytics/NHSRtt/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/nhs-bnssg-analytics/NHSRtt/actions/workflows/R-CMD-check.yaml)
+
+[![codecov](https://codecov.io/gh/nhs-bnssg-analytics/NHSRtt/graph/badge.svg?token=L2LCPH6JEJ)](https://codecov.io/gh/nhs-bnssg-analytics/NHSRtt)
 <!-- badges: end -->
 
 The goal of NHSRtt is to ...
