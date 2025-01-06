@@ -1,0 +1,9 @@
+pandoc: 3.1.11
+pkgdown: 2.1.1
+pkgdown_sha: ~
+articles:
+  rtt-pipeline: rtt-pipeline.html
+last_built: 2025-01-06T10:31Z
+urls:
+  reference: https://nhs-bnssg-analytics.github.io/NHSRtt/reference
+  article: https://nhs-bnssg-analytics.github.io/NHSRtt/articles
