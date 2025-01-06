@@ -2,6 +2,7 @@
 #' Download and tidy the referral to treatment data from the NHS Statistics
 #' webpage
 #'
+#' @param type string; one of "complete", "incomplete" or "referral"
 #' @param url string; url of the NHS Referral to Treatment (RTT) Waiting Times
 #' @param date_start date; start date (earliest date is 1st April 2016, but the
 #'   default is 1st April 2019)
@@ -17,13 +18,14 @@
 #' @examples
 #' \dontrun{
 #' monthly_rtt <- NHSRtt::get_rtt_data(
+#'   type = "complete",
 #'   date_start = as.Date("2024-10-01"),
 #'   date_end = as.Date("2024-11-01"),
 #'   show_progress = TRUE
 #' )
 #' }
 #'
-get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
+get_rtt_data <- function(type, url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
                          date_start = as.Date("2019-04-01"), date_end = Sys.Date(), show_progress = FALSE) {
 
   # check date inputs
@@ -38,6 +40,12 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
   } else if (is.na(show_progress)) {
     stop("show_progress must be TRUE or FALSE")
   }
+
+  # check inputs for type
+  type <- match.arg(
+    type,
+    c("complete", "incomplete", "referral")
+  )
 
   # calculate start year for financial year for date_start
   month_start <- as.numeric(format(date_start, "%m"))
@@ -84,8 +92,19 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
   names(xl_files) <- gsub(".*RTT waiting times data\\.", "", names(xl_files))
   names(xl_files) <- gsub("([[:alpha:]]{3}[0-9]{2}).*", "\\1", names(xl_files))
 
-  dts <- as.Date(paste0("01", substr_right(names(xl_files), 5)), "%d%b%y")
+  # include additional filter for type
+  if (type == "complete") {
+    type_filter <- "Admitted"
+  } else if (type == "incomplete") {
+    type_filter <- "Incomplete"
+  } else if (type == "referral") {
+    type_filter <- "New Periods"
+  }
 
+  xl_files <- xl_files[grepl(paste0("^", type_filter), names(xl_files))]
+
+  # filter for dates
+  dts <- as.Date(paste0("01", substr_right(names(xl_files), 5)), "%d%b%y")
   xl_files <- xl_files[dplyr::between(dts, date_start, date_end)]
 
   # update on progress
