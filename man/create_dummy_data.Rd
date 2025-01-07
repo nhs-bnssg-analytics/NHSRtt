@@ -10,7 +10,7 @@ create_dummy_data(
   number_periods,
   referral_values = 500:700,
   incomplete_values = 500:700,
-  treatment_values = 500:700,
+  max_treatments = 500,
   seed = 123
 )
 }
@@ -29,7 +29,7 @@ the count of referrals at each time step}
 \item{incomplete_values}{integer: vector of values that are sampled from for
 the count of incomplete pathways at each time step}
 
-\item{treatment_values}{integer: vector of values that are sampled from for
+\item{max_treatments}{integer: vector of values that are sampled from for
 the count of completed pathways at each time step}
 
 \item{seed}{seed to generate the random data from}

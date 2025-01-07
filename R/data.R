@@ -290,7 +290,7 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 #'   the count of referrals at each time step
 #' @param incomplete_values integer: vector of values that are sampled from for
 #'   the count of incomplete pathways at each time step
-#' @param treatment_values integer: vector of values that are sampled from for
+#' @param max_treatments integer: vector of values that are sampled from for
 #'   the count of completed pathways at each time step
 #' @param seed seed to generate the random data from
 #'
@@ -310,7 +310,7 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 create_dummy_data <- function(type, max_months_waited, number_periods,
                               referral_values = 500:700,
                               incomplete_values = 500:700,
-                              treatment_values = 500:700,
+                              max_treatments = 500,
                               seed = 123) {
   type <- match.arg(
     type,
@@ -342,16 +342,38 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
       out <- out |>
         dplyr::mutate(
           incompletes = sample(
-            500:700, length(periods) * length(months),
+            incomplete_values, length(periods) * length(months),
             replace = TRUE
           )
         )
     } else if (type == "completes") {
+
       out <- out |>
+        tidyr::complete(
+          period_id,
+          months_waited_id = 0:24
+        ) |>
         mutate(
-          treatments = sample(
-            500:700, length(periods) * length(months),
-            replace = TRUE
+          percentile = months_waited_id / 24,
+          treatments = weibull_sample(
+            percentile
+          ),
+          .by = period_id
+        ) |>
+        mutate(
+          # rescale treatments to the scale of interest determined by
+          # max_treatments
+          treatments = max_treatments * (treatments / max(treatments)),
+          months_waited_id = case_when(
+            months_waited_id <= max_months_waited ~ months_waited_id,
+            .default = max_months_waited
+          )
+        ) |>
+        summarise(
+          treatments = sum(treatments),
+          .by = c(
+            period_id,
+            months_waited_id
           )
         )
     }
