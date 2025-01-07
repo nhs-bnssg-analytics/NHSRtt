@@ -294,6 +294,7 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 #' @param seed seed to generate the random data from
 #'
 #' @importFrom dplyr tibble mutate
+#' @importFrom rlang .data
 #' @return a tibble whose columns depend on the type input. If type is
 #'   "referrals" then it will have two fields, period_id and referrals. If type
 #'   is "completes" or "incompletes", the fields will be period_id,
@@ -343,7 +344,7 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
       mutate(
         percentile = months_waited_id / 24,
         value = weibull_sample(
-          percentile
+          .data$percentile
         ),
         .by = period_id
       )
@@ -360,14 +361,14 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
       mutate(
         # rescale value to the scale of interest determined by
         # scale_value
-        value = scale_value * (value / max(value)),
+        value = scale_value * (.data$value / max(.data$value)),
         months_waited_id = case_when(
           months_waited_id <= max_months_waited ~ months_waited_id,
           .default = max_months_waited
         )
       ) |>
       summarise(
-        {{ type_name }} := sum(value),
+        {{ type_name }} := sum(.data$value),
         .by = c(
           period_id,
           months_waited_id

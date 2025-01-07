@@ -285,8 +285,8 @@ redistribute_incompletes <- function(incomplete_counts) {
 #' @noRd
 weibull_sample <- function(x) {
 
-  distribution_curve <- rweibull(100, shape = 0.95, scale = 1) |>
-    quantile(1 - x)
+  distribution_curve <- stats::rweibull(100, shape = 0.95, scale = 1) |>
+    stats::quantile(1 - x)
 
   return(distribution_curve)
 }
