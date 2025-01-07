@@ -1,6 +1,6 @@
-# NHSRtt 0.1.0.9000
+# NHSRtt 0.1.1
 
-* improves vignette
+* improves vignettes
 
 
 # NHSRtt 0.1.0
