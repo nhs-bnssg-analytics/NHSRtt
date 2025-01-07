@@ -26,6 +26,8 @@ Imports:
     tidyr,
     xml2
 Suggests: 
+    forecast,
+    gganimate,
     ggplot2,
     knitr,
     rmarkdown,
