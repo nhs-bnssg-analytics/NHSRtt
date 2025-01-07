@@ -286,12 +286,11 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 #'   patients waiting times by for the analysis. Data are published up to 104
 #'   weeks, so 24 is likely to be the maximum useful value for this argument.
 #' @param number_periods integer; the intended number of periods in the dataset
-#' @param referral_values integer: vector of values that are sampled from for
+#' @param referral_values integer; vector of values that are sampled from for
 #'   the count of referrals at each time step
-#' @param incomplete_values integer: vector of values that are sampled from for
-#'   the count of incomplete pathways at each time step
-#' @param max_treatments integer: vector of values that are sampled from for
-#'   the count of completed pathways at each time step
+#' @param max_incompletes integer; the maximum number of incomplete pathways
+#'   possible in one time step
+#' @param max_treatments integer; the maximum number of treatments possible
 #' @param seed seed to generate the random data from
 #'
 #' @importFrom dplyr tibble mutate
@@ -309,7 +308,7 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 #' )
 create_dummy_data <- function(type, max_months_waited, number_periods,
                               referral_values = 500:700,
-                              incomplete_values = 500:700,
+                              max_incompletes = 500,
                               max_treatments = 500,
                               seed = 123) {
   type <- match.arg(
@@ -336,47 +335,46 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
     out <- expand.grid(
       period_id = periods,
       months_waited_id = months
-    )
+    ) |>
+      tidyr::complete(
+        period_id,
+        months_waited_id = 0:24
+      ) |>
+      mutate(
+        percentile = months_waited_id / 24,
+        value = weibull_sample(
+          percentile
+        ),
+        .by = period_id
+      )
 
     if (type == "incompletes") {
-      out <- out |>
-        dplyr::mutate(
-          incompletes = sample(
-            incomplete_values, length(periods) * length(months),
-            replace = TRUE
-          )
-        )
+      scale_value <- max_incompletes
+      type_name <- "incompletes"
     } else if (type == "completes") {
-
-      out <- out |>
-        tidyr::complete(
-          period_id,
-          months_waited_id = 0:24
-        ) |>
-        mutate(
-          percentile = months_waited_id / 24,
-          treatments = weibull_sample(
-            percentile
-          ),
-          .by = period_id
-        ) |>
-        mutate(
-          # rescale treatments to the scale of interest determined by
-          # max_treatments
-          treatments = max_treatments * (treatments / max(treatments)),
-          months_waited_id = case_when(
-            months_waited_id <= max_months_waited ~ months_waited_id,
-            .default = max_months_waited
-          )
-        ) |>
-        summarise(
-          treatments = sum(treatments),
-          .by = c(
-            period_id,
-            months_waited_id
-          )
-        )
+      scale_value <- max_treatments
+      type_name <- "treatments"
     }
+
+    out <- out |>
+      mutate(
+        # rescale value to the scale of interest determined by
+        # scale_value
+        value = scale_value * (value / max(value)),
+        months_waited_id = case_when(
+          months_waited_id <= max_months_waited ~ months_waited_id,
+          .default = max_months_waited
+        )
+      ) |>
+      summarise(
+        {{ type_name }} := sum(value),
+        .by = c(
+          period_id,
+          months_waited_id
+        )
+      )
+
+
   }
 
   return(out)
