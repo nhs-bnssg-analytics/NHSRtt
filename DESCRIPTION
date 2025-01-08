@@ -29,6 +29,7 @@ Suggests:
     forecast,
     gganimate,
     ggplot2,
+    gifski (>= 1.4.3),
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)

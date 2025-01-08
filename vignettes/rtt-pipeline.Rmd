@@ -145,7 +145,7 @@ referrals <- NHSRtt::get_rtt_data(
 
 Here is what the first 15 rows of data for the completes object looks like when it comes out of the `get_rtt_data()` function (this may change if this is run on a different date as the data update monthly):
 
-```{r complete-data-example, echo=FALSE}
+```{r complete-data-example, echo=FALSE, tab.cap="Example completes data set following the download from the NHS website."}
 # this is what the completes data looks like:
 
 knitr::kable(
@@ -204,7 +204,9 @@ monthly_rtt <- dplyr::bind_rows(
       months_waited_id
     )
   )
+```
 
+```{r monthly-rtt-example, echo=FALSE, tab.cap="Example few records from the monthly_rtt object."}
 knitr::kable(
   head(monthly_rtt)  
 )
@@ -222,7 +224,7 @@ To calculate the renege and capacity parameters, the inputs you needs are:
 
 Here, we split the data out again into three objects (completes, incompletes and referrals)
 
-```{r data-manipulation}
+```{r data-manipulation-referrals}
 
 calibration_period <- monthly_rtt |>
   filter(
@@ -260,9 +262,13 @@ referrals <- calibration_period |>
   rename(
     referrals = "value"
   )
+```
 
+```{r referrals-example, echo=FALSE, tab.cap="Example referrals data set."}
 knitr::kable(referrals)
+```
 
+```{r data-manipulation-completes}
 completes <- calibration_period |>
   filter(
     type == "Complete"
@@ -275,11 +281,15 @@ completes <- calibration_period |>
   rename(
     treatments = "value"
   )
+```
 
+```{r completes-example, echo=FALSE, tab.cap="Example completes data set."}
 knitr::kable(
   head(completes, 12)
 )
+```
 
+```{r data-manipulation-incompletes}
 incompletes <- calibration_period |>
   filter(
     type == "Incomplete"
@@ -292,7 +302,9 @@ incompletes <- calibration_period |>
   rename(
     incompletes = "value"
   )
+```
 
+```{r incompletes-example, echo=FALSE, tab.cap="Example completes data set."}
 knitr::kable(
   head(incompletes, 12)
 )
@@ -314,7 +326,9 @@ params <- calibrate_capacity_renege_params(
   redistribute_m0_reneges = TRUE, 
   full_breakdown = FALSE # this can be set to TRUE to see all the transitions for all months waited at each time step
 )
+```
 
+```{r params-example, echo=FALSE, tab.cap="The structure of the output from the `calibrate_capacity_renege_params()` function."}
 knitr::kable(params)
 ```
 
@@ -400,7 +414,9 @@ incompletes_at_t0 <- validation_period |>
   rename(
     incompletes = "value"
   )
+```
 
+```{r incompletes-t0-example, echo=FALSE, tab.cap="Example of the structure of the incomplete pathways at t=0 that gets passed into the `apply_params_to_projections()` function."}
 knitr::kable(incompletes_at_t0)
 ```
 
@@ -414,7 +430,9 @@ validation_performance <- apply_params_to_projections(
   renege_capacity_params = params,
   max_months_waited = max_months_waited
 )
+```
 
+```{r validation-outputs, echo=FALSE, tab.cap="Example of the outputs from the `apply_params_to_projections()` function."}
 knitr::kable(
   head(validation_performance, 20)
 )
@@ -914,7 +932,7 @@ projections <- bind_rows(
 
 Here is a sample of the projection data:
 
-```{r projection-data}
+```{r projection-data, echo=FALSE, tab.cap="A sample of the projections object."}
 knitr::kable(
   head(projections, 10)
 )
@@ -951,7 +969,7 @@ projections <- projections |>
 
 This data can now be appended to the observed incomplete pathways data to visualise how incomplete pathways change by the number of months waited over the projection period:
 
-```{r visualise-projections, fig.width=7, fig.height=7}
+```{r visualise-projections, fig.width=8, fig.height=10}
 
 monthly_rtt |> 
   filter(
@@ -1006,7 +1024,8 @@ monthly_rtt |>
   ) +
   facet_wrap(
     facets = vars(months_waited_id),
-    scales = "free_y"
+    scales = "free_y",
+    ncol = 3
   ) +
   theme_bw() +
   theme(
