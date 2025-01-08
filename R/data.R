@@ -259,16 +259,17 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
         monthly_proportions,
         by = dplyr::join_by(
           week_end
-        )
+        ),
+        relationship = "many-to-many"
       ) |>
       dplyr::summarise(
         value = sum(.data$value * .data$month_weight),
         .by = c(
-          .data$trust,
-          .data$specialty,
-          .data$period,
-          .data$months_waited,
-          .data$type
+          "trust",
+          "specialty",
+          "period",
+          "months_waited",
+          "type"
         )
       )
   }
