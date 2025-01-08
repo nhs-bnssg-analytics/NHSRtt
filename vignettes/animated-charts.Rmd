@@ -43,7 +43,7 @@ The calibration data are created and passed to the `calibrate_capacity_renege_pa
 
 ```{r calibrate, warning=FALSE}
 referrals <- create_dummy_data(
-  type = "referrals",
+  type = "referral",
   max_months_waited = max_months_waited,
   number_periods = calibration_periods,
   referral_values = 500:600,
@@ -52,7 +52,7 @@ referrals <- create_dummy_data(
 
 
 incompletes <- create_dummy_data(
-  type = "incompletes",
+  type = "incomplete",
   max_months_waited = max_months_waited,
   number_periods = calibration_periods,
   max_incompletes = 500,
@@ -60,7 +60,7 @@ incompletes <- create_dummy_data(
 )
 
 completes <- create_dummy_data(
-  type = "completes",
+  type = "complete",
   max_months_waited = max_months_waited,
   number_periods = calibration_periods,
   max_treatments = 20,
@@ -479,7 +479,7 @@ bind_rows(
 
 This can also be displayed as a rolling animation.
 
-```{r animated-projections, fig.width=6, fig.height=6, message=FALSE}
+```{r animated-projections, fig.width=7, fig.height=5.5, message=FALSE}
 bind_rows(
   mild_1_projections,
   mild_2_projections,

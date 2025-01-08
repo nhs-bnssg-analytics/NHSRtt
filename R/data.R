@@ -281,7 +281,7 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 
 #' Create a set of dummy data to put through the functions of the package
 #'
-#' @param type string; one of "referrals", "incompletes" or "completes"
+#' @param type string; one of "referral", "incomplete" or "complete"
 #' @param max_months_waited integer; the maximum number of months to group
 #'   patients waiting times by for the analysis. Data are published up to 104
 #'   weeks, so 24 is likely to be the maximum useful value for this argument.
@@ -296,14 +296,14 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 #' @importFrom dplyr tibble mutate
 #' @importFrom rlang .data
 #' @return a tibble whose columns depend on the type input. If type is
-#'   "referrals" then it will have two fields, period_id and referrals. If type
-#'   is "completes" or "incompletes", the fields will be period_id,
+#'   "referral" then it will have two fields, period_id and referrals. If type
+#'   is "complete" or "incomplete", the fields will be period_id,
 #'   months_waited_id and treatments/incompletes, depending on the type value
 #' @export
 #'
 #' @examples
 #' create_dummy_data(
-#'   type = "referrals",
+#'   type = "referral",
 #'   max_months_waited = 4,
 #'   number_period = 6
 #' )
@@ -314,7 +314,7 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
                               seed = 123) {
   type <- match.arg(
     type,
-    c("referrals", "completes", "incompletes")
+    c("referral", "complete", "incomplete")
   )
 
   set.seed(seed)
@@ -323,7 +323,7 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
     0, seq_len(number_periods)
   )
 
-  if (type == "referrals") {
+  if (type == "referral") {
     out <- dplyr::tibble(
       period_id = periods,
       referrals = sample(referral_values, length(periods), replace = TRUE)
@@ -349,10 +349,10 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
         .by = period_id
       )
 
-    if (type == "incompletes") {
+    if (type == "incomplete") {
       scale_value <- max_incompletes
       type_name <- "incompletes"
-    } else if (type == "completes") {
+    } else if (type == "complete") {
       scale_value <- max_treatments
       type_name <- "treatments"
     }
