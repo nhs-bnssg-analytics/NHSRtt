@@ -375,8 +375,6 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
           months_waited_id
         )
       )
-
-
   }
 
   return(out)

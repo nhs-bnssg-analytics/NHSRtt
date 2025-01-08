@@ -54,15 +54,14 @@ test_that("get_rtt_data error checks", {
     info = "show_progress is not NA"
   )
 
-  expect_error(
+  expect_snapshot(
     get_rtt_data(
       type = "completes",
       date_start = as.Date("2024-10-01"),
       date_end = as.Date("2024-11-01"),
       show_progress = FALSE
     ),
-    "'arg' should be one of \"complete\", \"incomplete\", \"referral\"",
-    info = "correct input for type argument"
+    error = TRUE
   )
 
   expect_error(
@@ -210,15 +209,14 @@ test_that("tidy_file functionality", {
 
 test_that("create_dummy_data functionality", {
 
-  expect_error(
+  expect_snapshot(
     create_dummy_data(
       type = "completes",
       max_months_waited = 4,
       number_periods = 10,
       max_treatments = 50
     ),
-    "'arg' should be one of \"referral\", \"complete\", \"incomplete\"",
-    info = "correct input for type argument"
+    error = TRUE
   )
 
   mx_treatments <- 50
