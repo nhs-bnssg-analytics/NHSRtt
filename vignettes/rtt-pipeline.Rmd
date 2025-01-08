@@ -846,13 +846,11 @@ scenario_3_incompletes_at_t0 <- tbats_monthly_rtt |>
   ) |> 
   unlist() |> 
   setNames(nm = 0:12) |> 
-  tibble::enframe(
-    name = "months_waited_id",
-    value = "incompletes"
-  ) |> 
-  mutate(
-    months_waited_id = as.numeric(months_waited_id)
-  )
+  # turn the named vector into a two column tibble
+  (\(x) dplyr::tibble(
+    months_waited_id = as.numeric(names(x)),
+    incompletes = x
+  ))()
   
 ```
 
