@@ -2,3 +2,10 @@ url: https://nhs-bnssg-analytics.github.io/NHSRtt/
 template:
   bootstrap: 5
 
+
+articles:
+  - title: Getstarted
+  navbar:
+  contents:
+  - rtt-pipeline
+  - animated-charts
