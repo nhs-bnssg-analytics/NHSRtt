@@ -7,18 +7,20 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r global-settings, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
 
-```{r setup, messages=FALSE}
+```{r setup, message=FALSE}
 library(NHSRtt)
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(ggplot2)
+library(forecast)
 ```
 
 
@@ -29,29 +31,142 @@ The vignette shows:
 1. how the data are set up
 2. how the renege and capacity parameters are calculated
 3. how the parameter performance can be validated
-4. how the paramters can be applied to future scenarios
+4. how the parameters can be applied to future scenarios
+
+## Aims
+
+The aim of the exercise in this vignette is, for a selected acute trust, to predict future activity, and hence waiting times, for all elective activity at that trust.
+
+This is done by developing some model parameters, based on a stock-and-flow approach over a time period (called the calibration period). These parameters are calculated from publicly available data, which are counts of incomplete pathways, completed pathways and new referrals at each time step. The completed and incomplete pathways are broken down into the number of months the individuals in the pathways have been waiting.
+
+These parameters are then applied to a subsequent time period (called the validation period). The parameters are used to generate estimated incomplete activity for this period. This activity is compared with the observed activity to evaluate the modelling.
+
+The final part is to apply the model parameters to some future scenarios to predict future waiting times.
 
 ## Setting up the data
 
-The public data can be sourced with the `get_rtt_data()` function.
-Note, at the moment this provides one dataset, but this will be updated so the user specifies which data they will obtain.
+Conceptually, we want to use a year of data to calibrate parameters, and then the following six months to validate those parameters. We will then use these parameters to predict for the year following the valdiation period.
 
-Conceptually, we want to use a year of data to calibrate parameters, and then the following six months to validate those parameters.
+```{r data-download-setup}
 
-Within this code, the `convert_months_waited_to_id()` is used to convert the string for months_waited into a numeric value.
-
-```{r data_download}
-
-calibration_start <- as.Date("2023-01-01")
-calibration_end <- as.Date("2023-12-31")
-validation_end <- as.Date("2024-06-01")
+calibration_start <- as.Date("2023-05-01")
+calibration_end <- as.Date("2024-04-30")
+validation_start <- calibration_end + 1
+validation_end <- as.Date("2024-10-31")
+prediction_start <- validation_end + 1
+prediction_end <- as.Date("2025-10-31")
 analysis_trust <- "RC9" # filter for a single trust
 max_months_waited <- 12 # I am only interested in waiting time bins up to 12 months
+```
 
-monthly_rtt <- NHSRtt::get_rtt_data(
+```{r visualise-analysis-timings, echo=FALSE, fig.height=2, fig.width=7}
+dplyr::tibble(
+  start_date = c(calibration_start, validation_start, prediction_start),
+  end_date = c(calibration_end, validation_end, prediction_end),
+  mid_point = as.Date(start_date + 
+    (lubridate::as.duration(
+      lubridate::interval(
+        start_date, end_date
+        )
+    ) / 2
+  )),
+  period = factor(
+    c("Calibration", "Validation", "Prediction"),
+    levels = c("Prediction", "Validation", "Calibration"))
+) |> 
+  ggplot(
+    aes(y = period)
+  ) +
+  geom_segment(
+    aes(
+      x = start_date,
+      xend = end_date,
+      yend = period,
+      colour = period
+    ),
+    linewidth = 9
+  ) +
+  geom_text(
+    aes(
+      x = mid_point,
+      label = period
+    )
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(
+    y = "",
+    x = ""
+  ) +
+  scale_colour_manual(
+    name = "",
+    values = c(
+      "Calibration" = "#E69F00",
+      "Validation" = "#56B4E9",
+      "Prediction" = "#009E73"
+    )
+  )
+
+```
+
+The public data([source](https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/)) can be sourced with the `get_rtt_data()` function. The data we are interested from the website are the pathways that are admitted and non-admitted (these are considered completed pathways), incomplete (these are people who are still waiting to be admitted), and new RTT periods (these are new referrals that are entering the referral to treatment pathway). To specify which dataset to download, the `type` argument is set to one of "complete", "incomplete" or "referral". The data are provided by specialty and trust, so can be aggregated depending on the analysis of interest.
+
+
+```{r data-download}
+
+# each metric must be downloaded separately
+completes <- NHSRtt::get_rtt_data(
+  type = "complete",
   date_start = calibration_start,
   date_end = validation_end,
   show_progress = FALSE # can change this to TRUE to see progress
+)
+
+incompletes <- NHSRtt::get_rtt_data(
+  type = "incomplete",
+  date_start = calibration_start,
+  date_end = validation_end,
+  show_progress = FALSE # can change this to TRUE to see progress
+)
+
+referrals <- NHSRtt::get_rtt_data(
+  type = "referral",
+  date_start = calibration_start,
+  date_end = validation_end,
+  show_progress = FALSE # can change this to TRUE to see progress
+)
+```
+
+Here is what the first 15 rows of data for the completes object looks like when it comes out of the `get_rtt_data()` function (this may change if this is run on a different date as the data update monthly):
+
+```{r complete-data-example, echo=FALSE}
+# this is what the completes data looks like:
+
+knitr::kable(
+  head(completes, 15)
+)
+```
+
+For the purposes of this vignette, where we are performing the analysis on all activity (rather than by specialty), we append and aggregate the data before splitting it out again later into three datasets. The data manipulation here takes five steps:
+
+1. filter for the trust of interest
+2. change the "type" column into "Complete", "Incomplete" and "Referrals"
+3. convert the months_waited string into an id using the `convert_months_waited_to_id()` function
+4. aggregate all the counts by specialty into one overall figure
+5. create a "period_id" numeric field for the sequential months in the dataset
+
+
+```{r data-aggregation}
+monthly_rtt <- dplyr::bind_rows(
+  completes,
+  incompletes,
+  referrals
 ) |>
   filter(
     trust == analysis_trust
@@ -90,17 +205,24 @@ monthly_rtt <- NHSRtt::get_rtt_data(
     )
   )
 
-head(monthly_rtt)
+knitr::kable(
+  head(monthly_rtt)  
+)
+
 ```
 
 The data need to be in a specific format (as described by the function documentation) for the functions to work.
+
+
 To calculate the renege and capacity parameters, the inputs you needs are:
 
 1. Referrals per time step (these are inputs to each time step), where all referrals have waited 0 months
 2. Complete pathways per time step by the number of months waited
 3. Incomplete pathways per time step by the number of months waited
 
-```{r data_manipulation}
+Here, we split the data out again into three objects (completes, incompletes and referrals)
+
+```{r data-manipulation}
 
 calibration_period <- monthly_rtt |>
   filter(
@@ -118,6 +240,13 @@ calibration_period <- monthly_rtt |>
       type,
       months_waited_id
     )
+  ) |>
+  dplyr::select(
+    trust,
+    period_id,
+    type,
+    months_waited_id,
+    value
   )
 
 referrals <- calibration_period |>
@@ -132,7 +261,7 @@ referrals <- calibration_period |>
     referrals = "value"
   )
 
-print(referrals)
+knitr::kable(referrals)
 
 completes <- calibration_period |>
   filter(
@@ -147,7 +276,9 @@ completes <- calibration_period |>
     treatments = "value"
   )
 
-print(completes)
+knitr::kable(
+  head(completes, 12)
+)
 
 incompletes <- calibration_period |>
   filter(
@@ -162,13 +293,15 @@ incompletes <- calibration_period |>
     incompletes = "value"
   )
 
-print(incompletes)
+knitr::kable(
+  head(incompletes, 12)
+)
 
 ```
 
 ## Generating the model parameters
 
-These inputs can get passed into the `calibrate_capacity_renege_params()` function.
+These inputs are passed into the `calibrate_capacity_renege_params()` function.
 
 For occasions where renege counts are negative for the group of people that have been waiting 0 months, we can tell the modelling to assume these are under-reported referrals and redistribute these to referrals. This is done by setting the `redistribute_m0_reneges` to TRUE.
 
@@ -179,12 +312,13 @@ params <- calibrate_capacity_renege_params(
   incompletes = incompletes,
   max_months_waited = max_months_waited,
   redistribute_m0_reneges = TRUE, 
-  full_breakdown = FALSE # this can be set to TRUE to see all the transitions for all moths waited at each time step
+  full_breakdown = FALSE # this can be set to TRUE to see all the transitions for all months waited at each time step
 )
 
-print(params)
+knitr::kable(params)
 ```
 
+The renege parameter is a ratio of the mean number of patients that renege from the stock compared with the mean number entering the stock by months waited in the calibration period. The capacity parameter is the same as the renege parameter, but comparing the mean pathways completed with the mean count of individuals entering the stock.
 
 ## Validate these parameters on a known time series
 
@@ -192,12 +326,13 @@ Pass the parameters to a known timeseries, and calculate an evaluation metric, c
 
 The example below calculates the mean absolute percentage error (MAPE).
 
-First, the data needs constructing.
-The data required are:
+First, the data needs constructing. The data required are:
 
 1. a vector of capacity per time step
 2. a vector of referrals per time step
 3. a table of counts of incomplete pathways by months waiting for the time step prior to the first time step of the other two data inputs
+
+To create these data we take the full dataset we created earlier and filter for the validation time period.
 
 ```{r validation-data}
 
@@ -209,14 +344,12 @@ validation_period <- monthly_rtt |>
       validation_end
     )
   ) |>
-  summarise(
-    value = sum(value),
-    .by = c(
-      trust,
-      period_id,
-      type,
-      months_waited_id
-    )
+  dplyr::select(
+    trust,
+    period_id,
+    type,
+    months_waited_id,
+    value
   )
 
 validation_referrals <- validation_period |>
@@ -268,7 +401,7 @@ incompletes_at_t0 <- validation_period |>
     incompletes = "value"
   )
 
-print(incompletes_at_t0)
+knitr::kable(incompletes_at_t0)
 ```
 
 The data are then passed to `apply_params_to_projections()` which provides a full table of stocks at each time step.
@@ -282,15 +415,17 @@ validation_performance <- apply_params_to_projections(
   max_months_waited = max_months_waited
 )
 
-print(validation_performance)
+knitr::kable(
+  head(validation_performance, 20)
+)
 
 ```
 
-MAPE is then calculated from this
+The mean absolute percentage error (mape) can then be calculated from this.
 
 ```{r mape}
 # calculate mean absolute percentage error
-# 1. calculate observed incompetes by months waited and period
+# 1. calculate observed incompletes by months waited and period
 observed_incompletes <- validation_period |> 
   filter(
     type == "Incomplete",
@@ -315,7 +450,7 @@ estimated_incompletes <- validation_performance |>
   )
 
 # 3. calculate mape
-observed_incompletes |> 
+mape <- observed_incompletes |> 
   left_join(
     estimated_incompletes,
     by = join_by(
@@ -331,7 +466,575 @@ observed_incompletes |>
     mean_absolute_percentage_error = mean(
       absolute_percentage_error
     )
+  ) |> 
+  pull(mean_absolute_percentage_error)
+
+print(mape)
+```
+
+The mean absolute error (mae) can also be calculated:
+
+```{r mae}
+mae <- observed_incompletes |> 
+  left_join(
+    estimated_incompletes,
+    by = join_by(
+      period_id, months_waited_id
+    )
+  ) |> 
+  mutate(
+    absolute_error = abs(
+      predicted - observed
+    )
+  ) |> 
+  summarise(
+    mean_absolute_error = mean(
+      absolute_error
+    )
+  ) |> 
+  pull(mean_absolute_error)
+
+print(mae)
+```
+
+```{r round-errors, echo=FALSE}
+mape_rounded <- paste0(
+  formatC(
+    100 * mape, 
+    format = "f", 
+    digits = 1
+  ), 
+  "%"
+)
+
+mae_rounded <- formatC(
+  mae, 
+  format = "f", 
+  big.mark = ",",
+  digits = 1
+)
+
+```
+
+The mean absolute percentage error for the modelled parameters is `r mape_rounded` and the mean absolute error is `r mae_rounded`.
+
+## Future scenarios
+
+This section describes how to apply the parameters to different future scenarios. The process is identical to the validation process, but without the evaluation step (as we are predicting for a time period with unknown data).
+
+The three scenarios are:
+
+1. referrals increasing by 5% and capacity reducing by 5% compared with the equivalent months in the previous year
+2. referrals decreasing by 5% and capacity increasing by 5% compared with the equivalent months in the previous year
+3. using a timeseries method (TBATS) to forecast referrals and capacity
+
+```{r scenario-data}
+
+## Scenario 1 data 
+
+# move the date forward a year and uplift referrals and lower the completed
+# pathways; then filter for the dates of interest
+scenario_1 <- monthly_rtt |> 
+  mutate(
+    period = period %m+% months(12),
+    value = case_when(
+      type == "Referrals" ~ value * 1.05,
+      type == "Complete" ~ value * 0.95,
+      .default = value
+    )
+  ) |> 
+  filter(
+    between(
+      period,
+      prediction_start,
+      prediction_end
+    )
+  )
+
+# scenario 1 referrals
+
+scenario_1_referrals <- scenario_1 |>
+  filter(
+    type == "Referrals",
+    period_id != min(period_id)
+  ) |>
+  arrange(
+    period_id
+  ) |> 
+  pull(
+    value
+  )
+
+scenario_1_capacity <- scenario_1 |>
+  filter(
+    type == "Complete",
+    period_id != min(period_id)
+  ) |> 
+  summarise(
+    count = sum(value),
+    .by = period_id
+  ) |>
+  arrange(
+    period_id
+  ) |> 
+  pull(
+    count
+  )
+
+scenario_1_incompletes_at_t0 <- scenario_1 |>
+  filter(
+    type == "Incomplete",
+    period_id == min(period_id)
+  ) |>
+  distinct(
+    months_waited_id,
+    value
+  ) |>
+  rename(
+    incompletes = "value"
+  )
+
+
+## Scenario 2
+
+# move the date forward a year, uplift completed pathways and lower the
+# referrals; then filter for the dates of interest
+
+scenario_2 <- monthly_rtt |> 
+  mutate(
+    period = period %m+% months(12),
+    value = case_when(
+      type == "Complete" ~ value * 1.05,
+      type == "Referrals" ~ value * 0.95,
+      .default = value
+    )
+  ) |> 
+  filter(
+    between(
+      period,
+      prediction_start,
+      prediction_end
+    )
+  )
+
+scenario_2_referrals <- scenario_2 |>
+  filter(
+    type == "Referrals",
+    period_id != min(period_id)
+  ) |>
+  arrange(
+    period_id
+  ) |> 
+  pull(
+    value
+  )
+
+scenario_2_capacity <- scenario_2 |>
+  filter(
+    type == "Complete",
+    period_id != min(period_id)
+  ) |> 
+  summarise(
+    count = sum(value),
+    .by = period_id
+  ) |>
+  arrange(
+    period_id
+  ) |> 
+  pull(
+    count
+  )
+
+scenario_2_incompletes_at_t0 <- scenario_2 |>
+  filter(
+    type == "Incomplete",
+    period_id == min(period_id)
+  ) |>
+  distinct(
+    months_waited_id,
+    value
+  ) |>
+  rename(
+    incompletes = "value"
+  )
+```
+
+For the timeseries data, using tbats, we want a slightly longer dataset than we have available, so first we download an extra six months of data to append onto the start of the existing dataset, before doing the data manipulation prior to the forecasting. This will give us two years in total.
+
+```{r tbats-visualisation, echo=FALSE, fig.height=2.5, fig.width=7}
+tbats_start <- calibration_start %m-% months(6)
+tbats_end <- validation_end
+
+dplyr::tibble(
+  start_date = c(calibration_start, validation_start, tbats_start, prediction_start),
+  end_date = c(calibration_end, validation_end, tbats_end, prediction_end),
+  mid_point = as.Date(start_date + 
+    (lubridate::as.duration(
+      lubridate::interval(
+        start_date, end_date
+        )
+    ) / 2
+  )),
+  period = factor(
+    c("Calibration", "Validation", "TBATS", "Prediction"),
+    levels = c("Prediction", "TBATS", "Validation", "Calibration"))
+) |> 
+  ggplot(
+    aes(y = period)
+  ) +
+  geom_segment(
+    aes(
+      x = start_date,
+      xend = end_date,
+      yend = period,
+      colour = period
+    ),
+    linewidth = 9
+  ) +
+  geom_text(
+    aes(
+      x = mid_point,
+      label = period
+    )
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(
+    y = "",
+    x = ""
+  ) +
+  scale_colour_manual(
+    name = "",
+    values = c(
+      "Calibration" = "#E69F00",
+      "Validation" = "#56B4E9",
+      "TBATS" = "#D81B60",
+      "Prediction" = "#009E73"
+    )
+  )
+
+
+```
+
+```{r tbats-data-projections}
+# obtain and manipulate tbats data
+additional_start <- calibration_start %m-% months(6)
+additional_end <- calibration_start - 1
+
+
+# each metric must be downloaded separately
+additional_completes <- NHSRtt::get_rtt_data(
+  type = "complete",
+  date_start = additional_start,
+  date_end = additional_end
+)
+
+additional_incompletes <- NHSRtt::get_rtt_data(
+  type = "incomplete",
+  date_start = additional_start,
+  date_end = additional_end
+)
+
+additional_referrals <- NHSRtt::get_rtt_data(
+  type = "referral",
+  date_start = additional_start,
+  date_end = additional_end
+)
+
+# append and manipulation
+additional_monthly_rtt <- dplyr::bind_rows(
+  additional_completes,
+  additional_incompletes,
+  additional_referrals
+) |>
+  filter(
+    trust == analysis_trust
+  ) |> 
+  mutate(
+    type = case_when(
+      type == "Non-Admitted" ~ "Complete",
+      type == "Admitted" ~ "Complete",
+      type == "New Periods" ~ "Referrals",
+      .default = type
+    ),
+    months_waited_id = convert_months_waited_to_id(
+      months_waited,
+      max_months_waited
+    )
+  ) |>
+  summarise(
+    value = sum(value),
+    .by = c(
+      trust,
+      period,
+      type,
+      months_waited_id
+    )
+  ) |> 
+  arrange(
+    type,
+    months_waited_id,
+    period
+  ) |> 
+  mutate(
+    # here we relate the period_id to the period_id in the monthly_rtt data
+    # which we will apend this additional data to
+    period_id = (lubridate::interval(
+      min(monthly_rtt$period), period
+    ) %/% months(1)) + 1
+  )
+
+tbats_monthly_rtt <- bind_rows(
+  additional_monthly_rtt,
+  monthly_rtt
+) |> 
+  arrange(
+    type, months_waited_id, period
+  )
+
+## Scenario 3
+
+forecast_function <- function(rtt_table, number_timesteps) {
+  fcast <- rtt_table |> 
+    pull(value) |> 
+    ts(frequency = 12) |> 
+    forecast::tbats() |> 
+    forecast::forecast(h = number_timesteps) |> 
+    tidyr::as_tibble() |> 
+    pull(`Point Forecast`)
+  
+  return(fcast)
+}
+
+scenario_3_referrals <- tbats_monthly_rtt |> 
+  filter(
+    type == "Referrals"
+  ) |> 
+  forecast_function(
+    number_timesteps = 12
+  ) |> 
+  tail(11)
+
+scenario_3_capacity <-  tbats_monthly_rtt |> 
+  filter(
+    type == "Complete"
+  ) |> 
+  summarise(
+    value = sum(value),
+    .by = period_id
+  ) |> 
+  forecast_function(
+    number_timesteps = 12
+  ) |> 
+  tail(11)
+
+scenario_3_incompletes_at_t0 <- tbats_monthly_rtt |> 
+  filter(
+    type == "Incomplete"
+  ) |> 
+  group_by(months_waited_id) |> 
+  group_split() |> 
+  lapply(
+    forecast_function,
+    number_timesteps = 1
+  ) |> 
+  unlist() |> 
+  setNames(nm = 0:12) |> 
+  # turn the named vector into a two column tibble
+  (\(x) dplyr::tibble(
+    months_waited_id = as.numeric(names(x)),
+    incompletes = x
+  ))()
+  
+```
+
+
+For each scenario, the data are passed to the `apply_params_to_projections()` function and then appended to each other.
+
+```{r create-projections}
+ scenario_1_projections <- apply_params_to_projections(
+  capacity_projections = scenario_1_capacity,
+  referrals_projections = scenario_1_referrals,
+  incomplete_pathways = scenario_1_incompletes_at_t0,
+  renege_capacity_params = params,
+  max_months_waited = max_months_waited
+) |> 
+  mutate(
+    scenario = "Scenario 1"
+  )
+
+scenario_2_projections <- apply_params_to_projections(
+  capacity_projections = scenario_2_capacity,
+  referrals_projections = scenario_2_referrals,
+  incomplete_pathways = scenario_2_incompletes_at_t0,
+  renege_capacity_params = params,
+  max_months_waited = max_months_waited
+) |> 
+  mutate(
+    scenario = "Scenario 2"
+  )
+
+scenario_3_projections <- apply_params_to_projections(
+  capacity_projections = scenario_3_capacity,
+  referrals_projections = scenario_3_referrals,
+  incomplete_pathways = scenario_3_incompletes_at_t0,
+  renege_capacity_params = params,
+  max_months_waited = max_months_waited
+) |> 
+  mutate(
+    scenario = "Scenario 3"
+  )
+
+projections <- bind_rows(
+  scenario_1_projections,
+  scenario_2_projections,
+  scenario_3_projections
+) |> 
+  select(
+    "period_id",
+    "months_waited_id",
+    value = "incompletes",
+    "scenario"
+  ) |> 
+  # here we adjust the period_id field to follow on from the latest period_id in
+  # the validation dataset (because the apply_params_to_projections function
+  # resets the earliest period_id to 1)
+  mutate(
+    # 1 is added to the end because the first period is used for the count of
+    # incomplete pathways at t=0
+    period_id = period_id + max(validation_period$period_id) + 1
+  )
+```
+
+Here is a sample of the projection data:
+
+```{r projection-data}
+knitr::kable(
+  head(projections, 10)
+)
+```
+
+We need to attach the date onto the data to help visualising it:
+
+```{r attach-dates}
+
+date_lkp <- dplyr::tibble(
+  period = seq(
+    # 1 is added to the end because the first period is used for the count of
+    # incomplete pathways at t=0
+    from = prediction_start %m+% months(1),
+    to = prediction_end,
+    by = "months"
+  ),
+  period_id = seq(
+    from = min(projections$period_id),
+    to = max(projections$period_id),
+    by = 1
+  )
+)
+
+projections <- projections |> 
+  left_join(
+    date_lkp,
+    by = join_by(
+      period_id
+    )
   )
 
 ```
 
+This data can now be appended to the observed incomplete pathways data to visualise how incomplete pathways change by the number of months waited over the projection period:
+
+```{r visualise-projections, fig.width=7, fig.height=7}
+
+monthly_rtt |> 
+  filter(
+    type == "Incomplete"
+  ) |> 
+  select(
+    "period", "period_id", "months_waited_id", "value"
+  ) |> 
+  mutate(
+    scenario = "Observed"
+  ) |> 
+  bind_rows(
+    projections
+  ) |> 
+  mutate(
+    scenario = case_when(
+      scenario == "Scenario 1" ~ "%5 increase referrals\n5% decrease capacity",
+      scenario == "Scenario 2" ~ "%5 increase capacity\n5% decrease referrals",
+      scenario == "Scenario 3" ~ "TBATS",
+      .default = scenario
+    ),
+    scenario = factor(
+      scenario,
+      levels = c(
+        "Observed",
+        "%5 increase referrals\n5% decrease capacity",
+        "%5 increase capacity\n5% decrease referrals",
+        "TBATS"
+      )
+    ),
+    months_waited_id = paste(
+      months_waited_id,
+      "months waited"
+    ),
+    months_waited_id = factor(
+      months_waited_id,
+      levels = paste(0:12, "months waited")
+    )
+  ) |> 
+  ggplot(
+    aes(
+      x = period,
+      y = value
+    )
+  ) +
+  geom_line(
+    aes(
+      group = interaction(months_waited_id, scenario),
+      linetype = scenario,
+      colour = scenario
+    )
+  ) +
+  facet_wrap(
+    facets = vars(months_waited_id),
+    scales = "free_y"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom"
+  ) +
+  labs(
+    y = "Incomplete pathways",
+    x = "",
+    title = "Count of incomplete pathways with three future scenarios"
+  ) +
+  scale_colour_manual(
+    name = "Scenario",
+    values = c(
+      "Observed" = "black",
+      "%5 increase referrals\n5% decrease capacity" = "#D81B60",
+      "%5 increase capacity\n5% decrease referrals" = "#1E88E5",
+      "TBATS" = "#FFC107"
+    )
+  ) +
+  scale_linetype_manual(
+    name = "Scenario",
+    values = c(
+      "Observed" = "solid",
+      "%5 increase referrals\n5% decrease capacity" = "longdash",
+      "%5 increase capacity\n5% decrease referrals" = "longdash",
+      "TBATS" = "longdash"
+    )
+  )
+```
+
+For additional ways of visualising wait times that have proved effective, please see the other vignette.
