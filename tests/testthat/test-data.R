@@ -164,7 +164,10 @@ test_that("get_rtt_data functionality", {
 test_that("identify_n_skip_rows functionality", {
 
   rows <- identify_n_skip_rows(
-    filepath = test_sheet("New-Periods-Provider-Apr23.xls"),
+    # filepath = test_sheet("New-Periods-Provider-Apr23.xls"),
+    filepath = system.file(
+      "extdata", "New-Periods-Provider-Apr23.xls",
+      package = "NHSRtt", mustWork = TRUE),
     sheet = "Provider"
   )
 
@@ -178,7 +181,10 @@ test_that("identify_n_skip_rows functionality", {
 test_that("tidy_file functionality", {
 
   tidied_referrals <- tidy_file(
-    excel_filepath = test_sheet("New-Periods-Provider-Apr23.xls"),
+    # excel_filepath = test_sheet("New-Periods-Provider-Apr23.xls"),
+    excel_filepath = system.file(
+      "extdata", "New-Periods-Provider-Apr23.xls",
+      package = "NHSRtt", mustWork = TRUE),
     sheet = "Provider",
     n_skip = 13
   )

@@ -24,18 +24,18 @@
 #' @examples
 #' max_months <- 4
 #' refs <- create_dummy_data(
-#'   type = "referrals",
+#'   type = "referral",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
 #' incomp <- create_dummy_data(
-#'   type = "incompletes",
+#'   type = "incomplete",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
 #'
 #' comp <- create_dummy_data(
-#'   type = "completes",
+#'   type = "complete",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
@@ -231,18 +231,18 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #' @examples
 #' max_months <- 4
 #' refs <- create_dummy_data(
-#'   type = "referrals",
+#'   type = "referral",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
 #' incomp <- create_dummy_data(
-#'   type = "incompletes",
+#'   type = "incomplete",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
 #'
 #' comp <- create_dummy_data(
-#'   type = "completes",
+#'   type = "complete",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
