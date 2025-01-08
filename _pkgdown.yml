@@ -4,8 +4,8 @@ template:
 
 
 articles:
-  - title: Getstarted
-  navbar:
-  contents:
-  - rtt-pipeline
-  - animated-charts
+  - title: Get started
+    navbar: ~
+    contents:
+    - rtt-pipeline
+    - animated-charts
