@@ -279,9 +279,16 @@ redistribute_incompletes <- function(incomplete_counts) {
   return(incomplete_counts)
 }
 
-adjust_referrals <- function(variables) {
+#' rescale values to between 0 and 1
+#' @noRd
+weibull_sample <- function(x) {
 
+  distribution_curve <- stats::rweibull(100, shape = 0.95, scale = 1) |>
+    stats::quantile(1 - x)
+
+  return(distribution_curve)
 }
+
 
 # string functions --------------------------------------------------------
 #' convert the string version of months waited to the numeric id version

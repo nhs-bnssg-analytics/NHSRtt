@@ -6,6 +6,7 @@
 webpage}
 \usage{
 get_rtt_data(
+  type,
   url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
   date_start = as.Date("2019-04-01"),
   date_end = Sys.Date(),
@@ -13,6 +14,8 @@ get_rtt_data(
 )
 }
 \arguments{
+\item{type}{string; one of "complete", "incomplete" or "referral"}
+
 \item{url}{string; url of the NHS Referral to Treatment (RTT) Waiting Times}
 
 \item{date_start}{date; start date (earliest date is 1st April 2016, but the
@@ -34,6 +37,7 @@ webpage
 \examples{
 \dontrun{
 monthly_rtt <- NHSRtt::get_rtt_data(
+  type = "complete",
   date_start = as.Date("2024-10-01"),
   date_end = as.Date("2024-11-01"),
   show_progress = TRUE

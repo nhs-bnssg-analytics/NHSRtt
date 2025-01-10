@@ -9,8 +9,8 @@ create_dummy_data(
   max_months_waited,
   number_periods,
   referral_values = 500:700,
-  incomplete_values = 500:700,
-  treatment_values = 500:700,
+  max_incompletes = 500,
+  max_treatments = 500,
   seed = 123
 )
 }
@@ -23,14 +23,13 @@ weeks, so 24 is likely to be the maximum useful value for this argument.}
 
 \item{number_periods}{integer; the intended number of periods in the dataset}
 
-\item{referral_values}{integer: vector of values that are sampled from for
+\item{referral_values}{integer; vector of values that are sampled from for
 the count of referrals at each time step}
 
-\item{incomplete_values}{integer: vector of values that are sampled from for
-the count of incomplete pathways at each time step}
+\item{max_incompletes}{integer; the maximum number of incomplete pathways
+possible in one time step}
 
-\item{treatment_values}{integer: vector of values that are sampled from for
-the count of completed pathways at each time step}
+\item{max_treatments}{integer; the maximum number of treatments possible}
 
 \item{seed}{seed to generate the random data from}
 }

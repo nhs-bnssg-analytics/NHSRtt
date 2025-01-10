@@ -9,7 +9,7 @@ test_that("month_attribution_lkp function tests", {
     week_end_dates = week_ends
   )
 
-  expect_identical(
+  expect_equal(
     week_ends,
     unique(
       mnth_lkp[["week_end"]]
