@@ -17,7 +17,7 @@
 #' @param full_breakdown logical; include a full breakdown of monthly
 #'   transitions by period. FALSE provides the parameters by months_waited_id
 #'   only
-#' @importFrom dplyr setdiff across summarise
+#' @importFrom dplyr setdiff across summarise count filter
 #' @importFrom rlang .data
 #' @export
 #'
@@ -57,6 +57,9 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
   if (!is.logical(redistribute_m0_reneges))
     stop("adjust_renege_param must be TRUE or FALSE")
 
+  if (is.na(redistribute_m0_reneges))
+    stop("adjust_renege_param must be TRUE or FALSE")
+
   # max_months_waited
   if (!is.numeric(max_months_waited))
     stop("max_months_waited must be numeric")
@@ -78,6 +81,16 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     stop("the field names for incompletes should be period_id, months_waited_id and incompletes")
 
   # checking dimensions
+  if (nrow(referrals |> dplyr::count(period_id) |> dplyr::filter(n > 1)) > 0)
+    stop("period_id is repeated in referrals data")
+
+  if (nrow(completes |> dplyr::count(period_id, months_waited_id) |> dplyr::filter(n > 1)) > 0)
+    stop("repeated combinations of period_id and months_waited_id in completes data")
+
+  if (nrow(incompletes |> dplyr::count(period_id, months_waited_id) |> dplyr::filter(n > 1)) > 0)
+    stop("repeated combinations of period_id and months_waited_id in incompletes data")
+
+
   if (nrow(referrals) != length(unique(completes[["period_id"]])))
     stop("referrals and completes should have the same number of period_ids")
 
@@ -139,16 +152,6 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     mutate(
       reneges = .data$node_inflow -
         .data$treatments - .data$waiting_same_node
-    ) |>
-    # remove the earliest period_id as there is only information for
-    # months_waited_id = 0
-
-    # NOTE, I'm not sure this step is necessary and need to think about this. It
-    # is added information for month_waited_id = 0, which has the full amount of
-    # input data, so it could potentially be considered when calculating the
-    # parameters
-    filter(
-      period_id != min(.data$period_id)
     )
 
 
