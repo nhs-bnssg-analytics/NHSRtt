@@ -195,8 +195,6 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
       warning("negative capacity parameters present, investigate raw data")
   }
 
-
-
   return(reneg_cap)
 }
 
