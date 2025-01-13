@@ -284,6 +284,10 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
     stop("max_months_waited must be an integer")
 
 
+  # check field names
+  if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
+    stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
+
   if (!is.null(incomplete_pathways)) {
     # check the number of rows are less than or equal to the number of months
     # waited of interest
@@ -295,6 +299,7 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
     if (length(dplyr::setdiff(names(incomplete_pathways), c("months_waited_id", "incompletes"))) > 0) {
       stop("incomplete_pathways must have field names of 'months_waited_id' and 'incompletes'")
     }
+
 
     # make sure there is a value for every value of months_waited_id
     all_months_waited <- dplyr::tibble(
@@ -336,8 +341,8 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
       dplyr::summarise(
         node_inflow = sum(.data$incompletes),
         .by = c(
-          .data$period_id,
-          .data$months_waited_id
+          period_id,
+          months_waited_id
         )
       ) |>
       # add in referrals
