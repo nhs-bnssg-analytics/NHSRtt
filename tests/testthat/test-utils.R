@@ -46,7 +46,7 @@ test_that("redistribute_incompletes works", {
     label = "there are no negative values returned from the redistribute_incompletes function"
   )
 
-  expect_error(
+  expect_warning(
     redistribute_incompletes(-5:2),
     "not possible to redistribute incompletes because the sum of incompletes is negative"
   )

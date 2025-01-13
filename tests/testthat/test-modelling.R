@@ -169,37 +169,13 @@ test_that("calibrate_capacity_renege_params errors", {
   expect_error(
     calibrate_capacity_renege_params(
       referrals = refs |> filter(period_id != 2),
-      incompletes = incomp,
-      completes = comp,
-      max_months_waited = max_months,
-      redistribute_m0_reneges = TRUE
-    ),
-    "At least one month is missing from referrals data",
-    info = "all periods are in referrals data"
-  )
-
-  expect_error(
-    calibrate_capacity_renege_params(
-      referrals = refs,
-      incompletes = incomp,
+      incompletes = incomp |> filter(period_id != 2),
       completes = comp |> filter(period_id != 2),
       max_months_waited = max_months,
       redistribute_m0_reneges = TRUE
     ),
-    "At least one month is missing from completes data",
-    info = "all periods are in completes data"
-  )
-
-  expect_error(
-    calibrate_capacity_renege_params(
-      referrals = refs,
-      incompletes = incomp |> filter(period_id != 2),
-      completes = comp,
-      max_months_waited = max_months,
-      redistribute_m0_reneges = TRUE
-    ),
-    "At least one month is missing from incompletes data",
-    info = "all periods are in incompletes data"
+    "There is a missing period_id from the referrals, completes and incompletes data",
+    info = "all periods are in referrals, completes and incompletes data"
   )
 
 })

@@ -180,15 +180,25 @@ test_that("identify_n_skip_rows functionality", {
 
 test_that("tidy_file functionality", {
 
+  # tidied_referrals <- tidy_file(
+  #   # excel_filepath = test_sheet("New-Periods-Provider-Apr23.xls"),
+  #   excel_filepath = system.file(
+  #     "extdata", "New-Periods-Provider-Apr23.xls",
+  #     package = "NHSRtt", mustWork = TRUE),
+  #   sheet = "Provider",
+  #   n_skip = 13
+  # )
+
+
   tidied_referrals <- tidy_file(
-    # excel_filepath = test_sheet("New-Periods-Provider-Apr23.xls"),
-    excel_filepath = system.file(
-      "extdata", "New-Periods-Provider-Apr23.xls",
-      package = "NHSRtt", mustWork = TRUE),
+    excel_filepath = testthat::test_path(
+      testthat::test_path(
+        file.path("..", "..", "inst", "extdata", "New-Periods-Provider-Apr23.xls")
+      )
+    ),
     sheet = "Provider",
     n_skip = 13
   )
-
   expected_names <- c(
     "trust", "specialty",
     "Number of new RTT clock starts during the month",

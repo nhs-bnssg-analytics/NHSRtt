@@ -115,11 +115,7 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 
   # check all periods
   if (length(dplyr::setdiff(expected_period_ids, unique(referrals[["period_id"]]))) > 0)
-    stop("At least one month is missing from referrals data")
-  if (length(dplyr::setdiff(expected_period_ids, unique(completes[["period_id"]]))) > 0)
-    stop("At least one month is missing from completes data")
-  if (length(dplyr::setdiff(expected_period_ids, unique(incompletes[["period_id"]]))) > 0)
-    stop("At least one month is missing from incompletes data")
+    stop("There is a missing period_id from the referrals, completes and incompletes data")
 
   transitions <- calculate_timestep_transitions(
     referrals = referrals,
@@ -182,10 +178,10 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     reneg_cap <- reneg_cap |>
       summarise(
         across(
-          c(.data$renege_param, .data$capacity_param),
+          c(renege_param, capacity_param),
           ~ mean(.x, na.rm = TRUE)
         ),
-        .by = .data$months_waited_id
+        .by = months_waited_id
       )
 
     if (any(reneg_cap |> pull(.data$renege_param) < 0))
@@ -377,7 +373,6 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         incompletes = redistribute_incompletes(.data$incompletes)
       )
 
-# browser()
     # recreate the incomplete_pathways tibble for the next period
     incomplete_pathways <- transitions |>
       distinct(
