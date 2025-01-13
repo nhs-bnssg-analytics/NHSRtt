@@ -247,13 +247,12 @@ test_that("calibrate_capacity_renege_params functionality", {
   ) |>
     dplyr::as_tibble()
 
-  expected <- tibble::tribble(
-    ~`months_waited_id`, ~`renege_param`, ~`capacity_param`,
-    0L,  0.37640166060088,     0.5196652828326,
-    1L, -2.06558994698596,    2.55465828915496,
-    2L,  -4.2180808626746,     4.3484007188955,
-    3L, -4.25999018821329,    4.38332515684441,
-    4L, -4.32030318523386,    4.43358598769489
+  expected <- dplyr::tibble(
+    months_waited_id = 0:4,
+    renege_param = c(0.37640166060088, -2.06558994698596, -4.2180808626746,
+                     -4.25999018821329, -4.32030318523386),
+    capacity_param = c(0.5196652828326, 2.55465828915496, 4.3484007188955,
+                       4.38332515684441, 4.43358598769489)
   )
 
   expect_equal(

@@ -81,13 +81,13 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     stop("the field names for incompletes should be period_id, months_waited_id and incompletes")
 
   # checking dimensions
-  if (nrow(referrals |> dplyr::count(period_id) |> dplyr::filter(n > 1)) > 0)
+  if (nrow(referrals |> dplyr::count(.data$period_id) |> dplyr::filter(.data$n > 1)) > 0)
     stop("period_id is repeated in referrals data")
 
-  if (nrow(completes |> dplyr::count(period_id, months_waited_id) |> dplyr::filter(n > 1)) > 0)
+  if (nrow(completes |> dplyr::count(.data$period_id, .data$months_waited_id) |> dplyr::filter(.data$n > 1)) > 0)
     stop("repeated combinations of period_id and months_waited_id in completes data")
 
-  if (nrow(incompletes |> dplyr::count(period_id, months_waited_id) |> dplyr::filter(n > 1)) > 0)
+  if (nrow(incompletes |> dplyr::count(.data$period_id, .data$months_waited_id) |> dplyr::filter(.data$n > 1)) > 0)
     stop("repeated combinations of period_id and months_waited_id in incompletes data")
 
 
