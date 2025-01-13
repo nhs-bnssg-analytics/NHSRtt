@@ -279,7 +279,8 @@ redistribute_incompletes <- function(incomplete_counts) {
   return(incomplete_counts)
 }
 
-#' rescale values to between 0 and 1
+#' create distribution of data points based on a weibull curve
+#' @param x vector of values between 0 and 1 representing the quantile
 #' @noRd
 weibull_sample <- function(x) {
 
