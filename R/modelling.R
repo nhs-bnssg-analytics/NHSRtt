@@ -178,7 +178,7 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     reneg_cap <- reneg_cap |>
       summarise(
         across(
-          c(renege_param, capacity_param),
+          c("renege_param", "capacity_param"),
           ~ mean(.x, na.rm = TRUE)
         ),
         .by = months_waited_id

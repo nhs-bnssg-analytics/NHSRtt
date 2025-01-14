@@ -274,7 +274,7 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
       )
   }
 
-  if (basename(dirname(excel_filepath)) != "extdata")
+  if (basename(dirname(excel_filepath)) != "sheets")
     unlink(excel_filepath)
 
   return(rtt)
