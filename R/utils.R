@@ -325,3 +325,18 @@ convert_months_waited_to_id <- function(months_waited, max_months_waited) {
 
   return(months_waited)
 }
+
+parse_number <- function(x) {
+  parsed_number <- as.numeric(
+    unlist(
+      regmatches(
+        x,
+        gregexpr(
+          "[-]{0,1}[[:digit:]]+\\.{0,1}[[:digit:]]*",
+          x
+        )
+      )
+    )
+  )
+  return(parsed_number)
+}

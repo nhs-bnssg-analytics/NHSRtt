@@ -283,10 +283,6 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
   if (!is.numeric(max_months_waited))
     stop("max_months_waited must be an integer")
 
-  all_months_waited <- dplyr::tibble(
-    months_waited_id = c(0, seq_len(max_months_waited))
-  )
-
   # check field names
   if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
     stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
@@ -305,7 +301,9 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
 
 
     # make sure there is a value for every value of months_waited_id
-
+    all_months_waited <- dplyr::tibble(
+      months_waited_id = c(0, seq_len(max_months_waited))
+    )
 
     incomplete_pathways <- dplyr::left_join(
       all_months_waited,
