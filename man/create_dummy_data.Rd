@@ -15,7 +15,7 @@ create_dummy_data(
 )
 }
 \arguments{
-\item{type}{string; one of "referrals", "incompletes" or "completes"}
+\item{type}{string; one of "referral", "incomplete" or "complete"}
 
 \item{max_months_waited}{integer; the maximum number of months to group
 patients waiting times by for the analysis. Data are published up to 104
@@ -35,8 +35,8 @@ possible in one time step}
 }
 \value{
 a tibble whose columns depend on the type input. If type is
-  "referrals" then it will have two fields, period_id and referrals. If type
-  is "completes" or "incompletes", the fields will be period_id,
+  "referral" then it will have two fields, period_id and referrals. If type
+  is "complete" or "incomplete", the fields will be period_id,
   months_waited_id and treatments/incompletes, depending on the type value
 }
 \description{
@@ -44,7 +44,7 @@ Create a set of dummy data to put through the functions of the package
 }
 \examples{
 create_dummy_data(
-  type = "referrals",
+  type = "referral",
   max_months_waited = 4,
   number_period = 6
 )
