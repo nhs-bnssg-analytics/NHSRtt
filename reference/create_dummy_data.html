@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">NHSRtt</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,7 @@
 
 
 <dl><dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
-<dd><p>string; one of "referrals", "incompletes" or "completes"</p></dd>
+<dd><p>string; one of "referral", "incomplete" or "complete"</p></dd>
 
 
 <dt id="arg-max-months-waited">max_months_waited<a class="anchor" aria-label="anchor" href="#arg-max-months-waited"></a></dt>
@@ -93,15 +93,15 @@ possible in one time step</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>a tibble whose columns depend on the type input. If type is
-  "referrals" then it will have two fields, period_id and referrals. If type
-  is "completes" or "incompletes", the fields will be period_id,
+  "referral" then it will have two fields, period_id and referrals. If type
+  is "complete" or "incomplete", the fields will be period_id,
   months_waited_id and treatments/incompletes, depending on the type value</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">create_dummy_data</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="st">"referrals"</span>,</span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="st">"referral"</span>,</span></span>
 <span class="r-in"><span>  max_months_waited <span class="op">=</span> <span class="fl">4</span>,</span></span>
 <span class="r-in"><span>  number_period <span class="op">=</span> <span class="fl">6</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>

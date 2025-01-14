@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">NHSRtt</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -96,7 +96,7 @@ how to create animations.</p>
 <code><a href="../reference/calibrate_capacity_renege_params.html">calibrate_capacity_renege_params()</a></code> function.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">referrals</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/create_dummy_data.html">create_dummy_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"referrals"</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"referral"</span>,</span>
 <span>  max_months_waited <span class="op">=</span> <span class="va">max_months_waited</span>,</span>
 <span>  number_periods <span class="op">=</span> <span class="va">calibration_periods</span>,</span>
 <span>  referral_values <span class="op">=</span> <span class="fl">500</span><span class="op">:</span><span class="fl">600</span>,</span>
@@ -105,7 +105,7 @@ how to create animations.</p>
 <span></span>
 <span></span>
 <span><span class="va">incompletes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/create_dummy_data.html">create_dummy_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"incompletes"</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"incomplete"</span>,</span>
 <span>  max_months_waited <span class="op">=</span> <span class="va">max_months_waited</span>,</span>
 <span>  number_periods <span class="op">=</span> <span class="va">calibration_periods</span>,</span>
 <span>  max_incompletes <span class="op">=</span> <span class="fl">500</span>,</span>
@@ -113,7 +113,7 @@ how to create animations.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">completes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/create_dummy_data.html">create_dummy_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"completes"</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"complete"</span>,</span>
 <span>  max_months_waited <span class="op">=</span> <span class="va">max_months_waited</span>,</span>
 <span>  number_periods <span class="op">=</span> <span class="va">calibration_periods</span>,</span>
 <span>  max_treatments <span class="op">=</span> <span class="fl">20</span>,</span>
