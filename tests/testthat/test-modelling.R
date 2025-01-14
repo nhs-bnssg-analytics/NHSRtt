@@ -417,4 +417,15 @@ test_that("apply_params_to_projections functionality", {
     expected,
     info = "apply_params_to_projections is consistently working"
   )
+
+  # this scenario needs looking at: eg, where no incompletes are passed to the
+  # function
+
+  # projections_no_incompletes <- apply_params_to_projections(
+  #   capacity_projections = future_capacity,
+  #   referrals_projections = future_referrals,
+  #   renege_capacity_params = params,
+  #   max_months_waited = max_months
+  # )
+
 })
