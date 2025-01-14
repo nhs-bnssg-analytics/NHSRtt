@@ -196,8 +196,8 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
     mutate(
       period_id = .data$period_id + 1,
       months_waited_id = case_when(
-        .data$months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
-        .default = .data$months_waited_id + 1
+        months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
+        .default = months_waited_id + 1
       )
     ) |>
     filter(
@@ -207,8 +207,8 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
     dplyr::summarise(
       node_inflow = sum(.data$incompletes),
       .by = c(
-        .data$period_id,
-        .data$months_waited_id
+        period_id,
+        months_waited_id
       )
     )
 
@@ -279,7 +279,8 @@ redistribute_incompletes <- function(incomplete_counts) {
   return(incomplete_counts)
 }
 
-#' rescale values to between 0 and 1
+#' create distribution of data points based on a weibull curve
+#' @param x vector of values between 0 and 1 representing the quantile
 #' @noRd
 weibull_sample <- function(x) {
 
