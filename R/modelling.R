@@ -286,6 +286,9 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
   if (!is.numeric(max_months_waited))
     stop("max_months_waited must be an integer")
 
+  all_months_waited <- dplyr::tibble(
+    months_waited_id = c(0, seq_len(max_months_waited))
+  )
 
   if (!is.null(incomplete_pathways)) {
     # check the number of rows are less than or equal to the number of months
@@ -300,9 +303,7 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
     }
 
     # make sure there is a value for every value of months_waited_id
-    all_months_waited <- dplyr::tibble(
-      months_waited_id = c(0, seq_len(max_months_waited))
-    )
+
 
     incomplete_pathways <- dplyr::left_join(
       all_months_waited,
@@ -316,6 +317,11 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         )
       )
 
+  } else {
+    incomplete_pathways <- all_months_waited |>
+      mutate(
+        incompletes = 0
+      )
   }
 
   projections <- tibble(
