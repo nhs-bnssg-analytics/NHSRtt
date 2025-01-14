@@ -17,25 +17,25 @@
 #' @param full_breakdown logical; include a full breakdown of monthly
 #'   transitions by period. FALSE provides the parameters by months_waited_id
 #'   only
-#' @importFrom dplyr setdiff across summarise
+#' @importFrom dplyr setdiff across summarise count filter
 #' @importFrom rlang .data
 #' @export
 #'
 #' @examples
 #' max_months <- 4
 #' refs <- create_dummy_data(
-#'   type = "referrals",
+#'   type = "referral",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
 #' incomp <- create_dummy_data(
-#'   type = "incompletes",
+#'   type = "incomplete",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
 #'
 #' comp <- create_dummy_data(
-#'   type = "completes",
+#'   type = "complete",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
@@ -55,6 +55,9 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
   # data checks
   # redistribute_m0_reneges
   if (!is.logical(redistribute_m0_reneges))
+    stop("adjust_renege_param must be TRUE or FALSE")
+
+  if (is.na(redistribute_m0_reneges))
     stop("adjust_renege_param must be TRUE or FALSE")
 
   # max_months_waited
@@ -78,6 +81,16 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     stop("the field names for incompletes should be period_id, months_waited_id and incompletes")
 
   # checking dimensions
+  if (nrow(referrals |> dplyr::count(.data$period_id) |> dplyr::filter(.data$n > 1)) > 0)
+    stop("period_id is repeated in referrals data")
+
+  if (nrow(completes |> dplyr::count(.data$period_id, .data$months_waited_id) |> dplyr::filter(.data$n > 1)) > 0)
+    stop("repeated combinations of period_id and months_waited_id in completes data")
+
+  if (nrow(incompletes |> dplyr::count(.data$period_id, .data$months_waited_id) |> dplyr::filter(.data$n > 1)) > 0)
+    stop("repeated combinations of period_id and months_waited_id in incompletes data")
+
+
   if (nrow(referrals) != length(unique(completes[["period_id"]])))
     stop("referrals and completes should have the same number of period_ids")
 
@@ -102,11 +115,7 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 
   # check all periods
   if (length(dplyr::setdiff(expected_period_ids, unique(referrals[["period_id"]]))) > 0)
-    stop("At least one month is missing from referrals data")
-  if (length(dplyr::setdiff(expected_period_ids, unique(completes[["period_id"]]))) > 0)
-    stop("At least one month is missing from completes data")
-  if (length(dplyr::setdiff(expected_period_ids, unique(incompletes[["period_id"]]))) > 0)
-    stop("At least one month is missing from incompletes data")
+    stop("There is a missing period_id from the referrals, completes and incompletes data")
 
   transitions <- calculate_timestep_transitions(
     referrals = referrals,
@@ -139,16 +148,6 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     mutate(
       reneges = .data$node_inflow -
         .data$treatments - .data$waiting_same_node
-    ) |>
-    # remove the earliest period_id as there is only information for
-    # months_waited_id = 0
-
-    # NOTE, I'm not sure this step is necessary and need to think about this. It
-    # is added information for month_waited_id = 0, which has the full amount of
-    # input data, so it could potentially be considered when calculating the
-    # parameters
-    filter(
-      period_id != min(.data$period_id)
     )
 
 
@@ -179,10 +178,10 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     reneg_cap <- reneg_cap |>
       summarise(
         across(
-          c(.data$renege_param, .data$capacity_param),
+          c("renege_param", "capacity_param"),
           ~ mean(.x, na.rm = TRUE)
         ),
-        .by = .data$months_waited_id
+        .by = months_waited_id
       )
 
     if (any(reneg_cap |> pull(.data$renege_param) < 0))
@@ -191,8 +190,6 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     if (any(reneg_cap |> pull(.data$capacity_param) < 0))
       warning("negative capacity parameters present, investigate raw data")
   }
-
-
 
   return(reneg_cap)
 }
@@ -231,18 +228,18 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #' @examples
 #' max_months <- 4
 #' refs <- create_dummy_data(
-#'   type = "referrals",
+#'   type = "referral",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
 #' incomp <- create_dummy_data(
-#'   type = "incompletes",
+#'   type = "incomplete",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
 #'
 #' comp <- create_dummy_data(
-#'   type = "completes",
+#'   type = "complete",
 #'   max_months_waited = max_months,
 #'   number_periods = 6
 #' )
@@ -287,6 +284,10 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
     stop("max_months_waited must be an integer")
 
 
+  # check field names
+  if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
+    stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
+
   if (!is.null(incomplete_pathways)) {
     # check the number of rows are less than or equal to the number of months
     # waited of interest
@@ -298,6 +299,7 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
     if (length(dplyr::setdiff(names(incomplete_pathways), c("months_waited_id", "incompletes"))) > 0) {
       stop("incomplete_pathways must have field names of 'months_waited_id' and 'incompletes'")
     }
+
 
     # make sure there is a value for every value of months_waited_id
     all_months_waited <- dplyr::tibble(
@@ -339,8 +341,8 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
       dplyr::summarise(
         node_inflow = sum(.data$incompletes),
         .by = c(
-          .data$period_id,
-          .data$months_waited_id
+          period_id,
+          months_waited_id
         )
       ) |>
       # add in referrals
@@ -376,7 +378,6 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         incompletes = redistribute_incompletes(.data$incompletes)
       )
 
-# browser()
     # recreate the incomplete_pathways tibble for the next period
     incomplete_pathways <- transitions |>
       distinct(
@@ -402,50 +403,4 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
   }
 
   return(projections)
-
-  # # timestep 1 has inflow of initial incompletes plus referrals
-  # if (!is.null(incomplete_pathways)) {
-  #   incomplete_into_timestep_1 <- incomplete_pathways |>
-  #     mutate(
-  #       period_id = 1,
-  #       months_waited_id = case_when(
-  #         months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
-  #         .default = months_waited_id + 1
-  #       )
-  #     ) |>
-  #     dplyr::summarise(
-  #       node_inflow = sum(value),
-  #       .by = c(
-  #         period_id,
-  #         months_waited_id
-  #       )
-  #     )
-  # } else {
-  #   incomplete_into_timestep_1 <- tibble(
-  #     period_id = 1,
-  #     months_waited_id = seq_len(max_months_waited),
-  #     node_inflow = 0
-  #   )
-  # }
-  #
-  # referrals <- projected_referrals_capacity |>
-  #   dplyr::filter(
-  #     period_id == 1
-  #   ) |>
-  #   dplyr::select(
-  #     "period_id",
-  #     node_inflow = "referrals"
-  #   ) |>
-  #   mutate(
-  #     months_waited_id = 0
-  #   )
-  #
-  # transitions <- bind_rows(
-  #   incomplete_into_timestep_1,
-  #   referrals
-  # )
-
-  # calculate completes and reneges from the input parameters
-
-  # remaining patients are incompletes again, and are provided to the next timestep along with input referrals
 }

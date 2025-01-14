@@ -196,8 +196,8 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
     mutate(
       period_id = .data$period_id + 1,
       months_waited_id = case_when(
-        .data$months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
-        .default = .data$months_waited_id + 1
+        months_waited_id == max_months_waited ~ max_months_waited, # this prevents new bins appearing at the extent of the waiting period
+        .default = months_waited_id + 1
       )
     ) |>
     filter(
@@ -207,8 +207,8 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
     dplyr::summarise(
       node_inflow = sum(.data$incompletes),
       .by = c(
-        .data$period_id,
-        .data$months_waited_id
+        period_id,
+        months_waited_id
       )
     )
 
@@ -250,38 +250,37 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
 #' @param incomplete_counts numeric; vector of incomplete counts
 redistribute_incompletes <- function(incomplete_counts) {
 
-  if (sum(incomplete_counts) < 0)
-    stop("not possible to redistribute incompletes because the sum of incompletes is negative")
-
-  while (any(incomplete_counts < 0)) {
-    # total negative counts
-    total_negatives <- sum(incomplete_counts[incomplete_counts < 0])
-    # tmp2a<-sum(tmp_incompletes[tmp_incompletes<0])
-
+  if (sum(incomplete_counts) < 0) {
+    warning("not possible to redistribute incompletes because the sum of incompletes is negative")
     # force the negatives to 0
     incomplete_counts[incomplete_counts < 0] <- 0
+  } else {
+    while (any(incomplete_counts < 0)) {
+      # total negative counts
+      total_negatives <- sum(incomplete_counts[incomplete_counts < 0])
 
-    # tmp_incompletes[which(tmp_incompletes<0)]<-0
+      # force the negatives to 0
+      incomplete_counts[incomplete_counts < 0] <- 0
 
-    # count of positive values to proportion the total incomplete counts over
-    positive_stocks <- length(
-      incomplete_counts[incomplete_counts > 0]
-    )
+      # count of positive values to proportion the total incomplete counts over
+      positive_stocks <- length(
+        incomplete_counts[incomplete_counts > 0]
+      )
 
-    # adjustment
-    adjustment <- total_negatives / positive_stocks
+      # adjustment
+      adjustment <- total_negatives / positive_stocks
 
-    # adjust positive stocks to account for negative incompletes
-    incomplete_counts[incomplete_counts > 0] <-
-      incomplete_counts[incomplete_counts > 0] + adjustment
+      # adjust positive stocks to account for negative incompletes
+      incomplete_counts[incomplete_counts > 0] <-
+        incomplete_counts[incomplete_counts > 0] + adjustment
 
-    # tmp_incompletes[which(tmp_incompletes>0)]<-tmp_incompletes[which(tmp_incompletes>0)]+tmp2a/length(tmp_incompletes[which(tmp_incompletes>0)])
+    }
   }
-
   return(incomplete_counts)
 }
 
-#' rescale values to between 0 and 1
+#' create distribution of data points based on a weibull curve
+#' @param x vector of values between 0 and 1 representing the quantile
 #' @noRd
 weibull_sample <- function(x) {
 
