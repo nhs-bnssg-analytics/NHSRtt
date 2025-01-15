@@ -24,7 +24,7 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   # checks
 
   # check lengths of inputs
-  if (length(t_1_capacity) == 1)
+  if (length(t_1_capacity) != 1)
     stop("t_1_capacity must be length 1")
 
   # check numeric inputs for t_1_capacity
@@ -62,6 +62,10 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
   if (length(parse_number(target)) > 1)
     stop("multiple numbers parsed from target")
+
+  if (!between(parse_number(target), 0, 100) &
+      !grepl("~", target))
+      stop("absolute target must be between 0% and 100%")
 
   # checks on tolerance
   if (!is.numeric(tolerance))
