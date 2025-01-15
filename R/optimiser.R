@@ -6,6 +6,8 @@
 #'   for each period in the projected time period
 #' @param target string length 1; can be either a percentage point change, eg,
 #'   "~-5%" or a percent value, eg, "5%"
+#' @param target_bin numeric length 1; the bin that the target refers to. It
+#'   must be less than or equal to the max_months_waited value
 #' @param tolerance numeric length 1; the tolerance used to compare the absolute
 #'   error with in the max_months_waited bin to determine convergence. The
 #'   absolute error is calculated on the proportion in the max_months_waited bin
@@ -19,7 +21,8 @@
 #'
 optimise_capacity <- function(t_1_capacity, referrals_projections,
                               incomplete_pathways, renege_capacity_params,
-                              max_months_waited, target, tolerance) {
+                              target, target_bin,
+                              tolerance) {
 
   # checks
 
@@ -77,10 +80,20 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   # target calculation
   current_val <- incomplete_pathways |>
     mutate(
+      months_waited_id = case_when(
+        months_waited_id >= target_bin ~ target_bin,
+        .default = months_waited_id
+      )
+    ) |>
+    summarise(
+      incompletes = sum(incompletes),
+      .by = months_waited_id
+    ) |>
+    mutate(
       prop = .data$incompletes / sum(.data$incompletes)
     ) |>
     filter(
-      .data$months_waited_id == max_months_waited
+      .data$months_waited_id == target_bin
     ) |>
     pull(.data$prop)
 

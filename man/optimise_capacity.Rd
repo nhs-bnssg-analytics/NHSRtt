@@ -9,8 +9,8 @@ optimise_capacity(
   referrals_projections,
   incomplete_pathways,
   renege_capacity_params,
-  max_months_waited,
   target,
+  target_bin,
   tolerance
 )
 }
@@ -33,12 +33,11 @@ waited group of interest), and fields called capacity_param and
 renege_param, which are outputs from the function
 \code{calibrate_capacity_renege_params()}}
 
-\item{max_months_waited}{integer; the maximum number of months to group
-patients waiting times by for the analysis. Data are published up to 104
-weeks, so 24 is likely to be the maximum useful value for this argument.}
-
 \item{target}{string length 1; can be either a percentage point change, eg,
 "~-5%" or a percent value, eg, "5%"}
+
+\item{target_bin}{numeric length 1; the bin that the target refers to. It
+must be less than or equal to the max_months_waited value}
 
 \item{tolerance}{numeric length 1; the tolerance used to compare the absolute
 error with in the max_months_waited bin to determine convergence. The
