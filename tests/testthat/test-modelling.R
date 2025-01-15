@@ -204,7 +204,7 @@ test_that("calibrate_capacity_renege_params warnings", {
     calibrate_capacity_renege_params(
       referrals = refs,
       incompletes = incomp,
-      completes = comp,
+      completes = comp |> mutate(treatments = treatments * 10),
       max_months_waited = max_months,
       redistribute_m0_reneges = TRUE
     ),
@@ -223,9 +223,9 @@ test_that("calibrate_capacity_renege_params functionality", {
     max_months_waited = max_months,
     number_periods = periods
   )
+
   incomp <- create_dummy_data(
     type = "incomplete",
-    max_incompletes = 100,
     max_months_waited = max_months,
     number_periods = periods
   )
@@ -248,12 +248,10 @@ test_that("calibrate_capacity_renege_params functionality", {
     dplyr::as_tibble()
 
   expected <- dplyr::tibble(
-    months_waited_id = 0:4,
-    renege_param = c(0.37640166060088, -2.06558994698596, -4.2180808626746,
-                     -4.25999018821329, -4.32030318523386),
-    capacity_param = c(0.5196652828326, 2.55465828915496, 4.3484007188955,
-                       4.38332515684441, 4.43358598769489)
-  )
+     months_waited_id = c(0L, 1L, 2L, 3L, 4L),
+     renege_param = c(0.373061815, 0.463521759, 0.086835849, 0.079501717, 0.068946943),
+     capacity_param = c(0.029854199, 0.025546583, 0.043484007, 0.043833252, 0.04433586)
+   )
 
   expect_equal(
     params,

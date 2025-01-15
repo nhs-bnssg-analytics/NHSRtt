@@ -8,8 +8,8 @@ create_dummy_data(
   type,
   max_months_waited,
   number_periods,
-  referral_values = 500:700,
-  max_incompletes = 500,
+  referral_values = 9000:12000,
+  max_incompletes = 10000,
   max_treatments = 500,
   seed = 123
 )

@@ -310,8 +310,8 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
 #'   number_period = 6
 #' )
 create_dummy_data <- function(type, max_months_waited, number_periods,
-                              referral_values = 500:700,
-                              max_incompletes = 500,
+                              referral_values = 9000:12000,
+                              max_incompletes = 10000,
                               max_treatments = 500,
                               seed = 123) {
   type <- match.arg(

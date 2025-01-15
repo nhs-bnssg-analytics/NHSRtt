@@ -32,23 +32,24 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
   # check numeric inputs for t_1_capacity
   if (!is.numeric(t_1_capacity))
-    stop("t_1_capacity must be an numeric")
+    stop("t_1_capacity must be numeric")
 
   if (!is.numeric(referrals_projections))
     stop("referrals must be a numeric vector")
 
-  # check numeric inputs for max_months_waited
-  if (!is.numeric(max_months_waited))
-    stop("max_months_waited must be an integer")
+  # check target_bin in incompletes data
+  if (!(target_bin %in% incomplete_pathways[["months_waited_id"]]))
+    stop("target_bin must be within the incompletes_pathways data set")
 
   # check field names
   if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
     stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
 
-  # check the number of rows are less than or equal to the number of months
-  # waited of interest
-  if (nrow(incomplete_pathways) > max_months_waited + 1) {
-    stop("incomplete_pathways must have nrow less than or equal to max_months_waited + 1")
+  # check whether target_bin is less than the greatest number of months waited
+  # in the incompletes dataset
+  max_months_waited <- max(incomplete_pathways[["months_waited_id"]])
+  if (target_bin > max_months_waited) {
+    stop("target_bin is outside the months waited range in the data provided")
   }
 
   # check the column headers
@@ -60,7 +61,7 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   if (!grepl("%", target))
     stop("target must have a percentage")
 
-  if (!is.numeric(parse_number(target)))
+  if (length(parse_number(target)) == 0)
     stop("unable to parse the number from target")
 
   if (length(parse_number(target)) > 1)
@@ -143,10 +144,20 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
         period_id == max(period_id)
       ) |>
       mutate(
+        months_waited_id = case_when(
+          months_waited_id >= target_bin ~ target_bin,
+          .default = months_waited_id
+        )
+      ) |>
+      summarise(
+        incompletes = sum(incompletes),
+        .by = months_waited_id
+      ) |>
+      mutate(
         proportion_incomplete = incompletes / sum(incompletes)
       ) |>
       filter(
-        .data$months_waited_id == max_months_waited
+        .data$months_waited_id == target_bin
       ) |>
       pull(
         .data$proportion_incomplete
