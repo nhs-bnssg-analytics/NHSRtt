@@ -207,8 +207,8 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
     dplyr::summarise(
       node_inflow = sum(.data$incompletes),
       .by = c(
-        period_id,
-        months_waited_id
+        "period_id",
+        "months_waited_id"
       )
     )
 
@@ -324,4 +324,19 @@ convert_months_waited_to_id <- function(months_waited, max_months_waited) {
   months_waited[months_waited > max_months_waited] <- max_months_waited
 
   return(months_waited)
+}
+
+parse_number <- function(x) {
+  parsed_number <- as.numeric(
+    unlist(
+      regmatches(
+        x,
+        gregexpr(
+          "[-]{0,1}[[:digit:]]+\\.{0,1}[[:digit:]]*",
+          x
+        )
+      )
+    )
+  )
+  return(parsed_number)
 }
