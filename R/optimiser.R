@@ -159,16 +159,22 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       summarise(
         incompletes = sum(.data$incompletes),
         .by = "months_waited_id"
-      ) |>
-      mutate(
-        proportion_incomplete = .data$incompletes / sum(.data$incompletes)
-      ) |>
-      filter(
-        .data$months_waited_id == target_bin
-      ) |>
-      pull(
-        .data$proportion_incomplete
       )
+
+    if (sum(proportion_at_highest_bin[["incompletes"]]) == 0) {
+      proportion_at_highest_bin <- 0
+    } else {
+      proportion_at_highest_bin <- proportion_at_highest_bin |>
+        mutate(
+          proportion_incomplete = .data$incompletes / sum(.data$incompletes)
+        ) |>
+        filter(
+          .data$months_waited_id == target_bin
+        ) |>
+        pull(
+          .data$proportion_incomplete
+        )
+    }
 
     compare_with_target <- (proportion_at_highest_bin - target_val)
 
