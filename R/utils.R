@@ -207,8 +207,8 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
     dplyr::summarise(
       node_inflow = sum(.data$incompletes),
       .by = c(
-        period_id,
-        months_waited_id
+        "period_id",
+        "months_waited_id"
       )
     )
 

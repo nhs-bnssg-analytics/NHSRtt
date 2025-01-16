@@ -181,7 +181,7 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
           c("renege_param", "capacity_param"),
           ~ mean(.x, na.rm = TRUE)
         ),
-        .by = months_waited_id
+        .by = "months_waited_id"
       )
 
     if (any(reneg_cap |> pull(.data$renege_param) < 0))
@@ -345,8 +345,8 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
       dplyr::summarise(
         node_inflow = sum(.data$incompletes),
         .by = c(
-          period_id,
-          months_waited_id
+          "period_id",
+          "months_waited_id"
         )
       ) |>
       # add in referrals

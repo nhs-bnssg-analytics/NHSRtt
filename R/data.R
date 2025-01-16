@@ -348,7 +348,7 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
         value = weibull_sample(
           .data$percentile
         ),
-        .by = period_id
+        .by = "period_id"
       )
 
     if (type == "incomplete") {
@@ -372,8 +372,8 @@ create_dummy_data <- function(type, max_months_waited, number_periods,
       summarise(
         {{ type_name }} := sum(.data$value),
         .by = c(
-          period_id,
-          months_waited_id
+          "period_id",
+          "months_waited_id"
         )
       )
   }

@@ -114,7 +114,7 @@ test_that("optimise_capacity errors", {
       target = "~-2%",
       tolerance = 0.005
     ),
-    "target_bin is outside the months waited range in the data provided",
+    "target_bin must be within the incompletes_pathways data set",
     info = "target_bin is higher than what is in the data"
   )
 
@@ -205,7 +205,58 @@ test_that("optimise_capacity errors", {
   )
 })
 
+test_that("optimise_capacity functionality", {
 
+  params <- dplyr::tibble(
+    months_waited_id = c(0L, 1L, 2L, 3L, 4L),
+    renege_param = c(0.373061815, 0.463521759, 0.086835849, 0.079501717, 0.068946943),
+    capacity_param = c(0.029854199, 0.025546583, 0.043484007, 0.043833252, 0.04433586)
+  )
+
+  max_months <- 4
+
+  future_capacity <- create_dummy_data(
+    type = "complete",
+    max_months_waited = max_months,
+    number_periods = 1,
+  ) |>
+    dplyr::pull(.data$treatments) |>
+    sum()
+
+  future_referrals <- create_dummy_data(
+    type = "referral",
+    max_months_waited = max_months,
+    number_periods = 24,
+  ) |>
+    dplyr::pull(.data$referrals)
+
+  incompletes_t0 <- create_dummy_data(
+    type = "incomplete",
+    max_months_waited = max_months,
+    number_periods = 1,
+  ) |>
+    dplyr::summarise(
+      incompletes = mean(.data$incompletes),
+      .by = "months_waited_id"
+    )
+
+  expect_warning(
+    optimise_capacity(
+      t_1_capacity = future_capacity,
+      referrals_projections = future_referrals,
+      incomplete_pathways = incompletes_t0,
+      renege_capacity_params = params,
+      target_bin = max_months,
+      target = "~-2%",
+      tolerance = 0.005,
+      max_iterations = 2
+    ),
+    "optimiser failed to converge before maximum iteration reached",
+    info = "optimise_capacity fails to converge within given constraints"
+  )
+
+
+})
 
 
 test_that("optimise_capacity functionality", {
@@ -231,7 +282,7 @@ test_that("optimise_capacity functionality", {
     max_months_waited = max_months,
     number_periods = 24,
   ) |>
-    pull(.data$referrals)
+    dplyr::pull(.data$referrals)
 
   incompletes_t0 <- create_dummy_data(
     type = "incomplete",
@@ -242,7 +293,6 @@ test_that("optimise_capacity functionality", {
       incompletes = mean(.data$incompletes),
       .by = "months_waited_id"
     )
-
 
   expect_equal(
     optimise_capacity(
@@ -257,6 +307,4 @@ test_that("optimise_capacity functionality", {
     0.71875,
     info = "optimise_capacity consistently produces an answer"
   )
-
-
 })

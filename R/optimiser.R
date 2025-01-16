@@ -5,14 +5,20 @@
 #' @param referrals_projections numeric; a vector for the number of referrals
 #'   for each period in the projected time period
 #' @param target string length 1; can be either a percentage point change, eg,
-#'   "~-5%" or a percent value, eg, "5%"
+#'   "~-5\%" or a percent value, eg, "5\%"
 #' @param target_bin numeric length 1; the bin that the target refers to. It
 #'   must be less than or equal to the max_months_waited value
 #' @param tolerance numeric length 1; the tolerance used to compare the absolute
 #'   error with in the max_months_waited bin to determine convergence. The
 #'   absolute error is calculated on the proportion in the max_months_waited bin
 #'   relative to the total waiting (even if a non-percentage target is used)
+#' @param max_iterations numeric; the maximum number of iterations to test for
+#'   convergence before providing a warning and an invalid number
 #' @inheritParams apply_params_to_projections
+#'
+#' @importFrom dplyr setdiff mutate case_when summarise filter pull between
+#' @importFrom stats lm predict
+#' @importFrom rlang .data
 #'
 #' @returns a capacity multiplier representing the annual change in capacity
 #'   (from the input t_1_capacity to a capacity at t = 13) to achieve the
@@ -22,7 +28,7 @@
 optimise_capacity <- function(t_1_capacity, referrals_projections,
                               incomplete_pathways, renege_capacity_params,
                               target, target_bin,
-                              tolerance) {
+                              tolerance, max_iterations = 50) {
 
   # checks
 
@@ -87,8 +93,8 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       )
     ) |>
     summarise(
-      incompletes = sum(incompletes),
-      .by = months_waited_id
+      incompletes = sum(.data$incompletes),
+      .by = "months_waited_id"
     ) |>
     mutate(
       prop = .data$incompletes / sum(.data$incompletes)
@@ -107,6 +113,7 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
   change_proportion <- 1
   converged <- FALSE
+  iteration <- 1
 
   # adjustment is the amount to adjust the change_proportion when attempting to
   # converge; starts at 1
@@ -119,14 +126,14 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
   while (converged == FALSE) {
     # build linear model for monthly capacity
-    lm_fit <- lm(
+    lm_fit <- stats::lm(
       capacity ~ period,
       data = tibble(
         capacity = c(t_1_capacity, t_1_capacity * change_proportion),
         period = c(1, 13)
       ))
 
-    capacity_projections <- predict(
+    capacity_projections <- stats::predict(
       object = lm_fit,
       newdata = tibble(period = 1:length(referrals_projections))
     ) |>
@@ -150,11 +157,11 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
         )
       ) |>
       summarise(
-        incompletes = sum(incompletes),
-        .by = months_waited_id
+        incompletes = sum(.data$incompletes),
+        .by = "months_waited_id"
       ) |>
       mutate(
-        proportion_incomplete = incompletes / sum(incompletes)
+        proportion_incomplete = .data$incompletes / sum(.data$incompletes)
       ) |>
       filter(
         .data$months_waited_id == target_bin
@@ -168,6 +175,12 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     if (abs(compare_with_target) < tolerance) {
       converged <- TRUE
     } else {
+      iteration <- iteration + 1
+      if (iteration > max_iterations) {
+        warning("optimiser failed to converge before maximum iteration reached")
+        converged <- TRUE # set to true so while loop is exited
+        change_proportion <- NA_real_
+      }
       if (compare_with_target > 0) {
         above_target <- TRUE
 

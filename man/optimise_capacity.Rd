@@ -11,7 +11,8 @@ optimise_capacity(
   renege_capacity_params,
   target,
   target_bin,
-  tolerance
+  tolerance,
+  max_iterations = 50
 )
 }
 \arguments{
@@ -34,7 +35,7 @@ renege_param, which are outputs from the function
 \code{calibrate_capacity_renege_params()}}
 
 \item{target}{string length 1; can be either a percentage point change, eg,
-"~-5%" or a percent value, eg, "5%"}
+"~-5\%" or a percent value, eg, "5\%"}
 
 \item{target_bin}{numeric length 1; the bin that the target refers to. It
 must be less than or equal to the max_months_waited value}
@@ -43,6 +44,9 @@ must be less than or equal to the max_months_waited value}
 error with in the max_months_waited bin to determine convergence. The
 absolute error is calculated on the proportion in the max_months_waited bin
 relative to the total waiting (even if a non-percentage target is used)}
+
+\item{max_iterations}{numeric; the maximum number of iterations to test for
+convergence before providing a warning and an invalid number}
 }
 \value{
 a capacity multiplier representing the annual change in capacity
