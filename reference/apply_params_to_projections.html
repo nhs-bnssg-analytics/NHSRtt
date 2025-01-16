@@ -11,7 +11,7 @@ projections for incomplete pathways per period"></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">NHSRtt</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -127,7 +127,6 @@ weeks, so 24 is likely to be the maximum useful value for this argument.</p></dd
 <span class="r-in"><span>  max_months_waited <span class="op">=</span> <span class="va">max_months</span>,</span></span>
 <span class="r-in"><span>  redistribute_m0_reneges <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>negative renege parameters present, investigate raw data</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">future_capacity</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">300</span><span class="op">:</span><span class="fl">500</span>, <span class="fl">4</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
@@ -148,6 +147,10 @@ weeks, so 24 is likely to be the maximum useful value for this argument.</p></dd
 <span class="r-in"><span>  renege_capacity_params <span class="op">=</span> <span class="va">params</span>,</span></span>
 <span class="r-in"><span>  max_months_waited <span class="op">=</span> <span class="va">max_months</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>There was 1 warning in `mutate()`.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> In argument: `incompletes = redistribute_incompletes(.data$incompletes)`.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> Caused by warning in `redistribute_incompletes()`:</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> not possible to redistribute incompletes because the sum of incompletes is negative</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
