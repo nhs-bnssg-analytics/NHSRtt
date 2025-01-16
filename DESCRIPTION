@@ -1,7 +1,7 @@
 Package: NHSRtt
 Type: Package
 Title: Scenario plan for future elective scenarios using public NHS data
-Version: 0.1.2.9000
+Version: 0.1.3
 Authors@R: c(
     person("Sebastian", "Fox", , "sebastian.fox3@nhs.net", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2832-773X")),
