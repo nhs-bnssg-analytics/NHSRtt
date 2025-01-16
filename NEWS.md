@@ -1,5 +1,6 @@
-# NHSRtt 0.1.2.9000
+# NHSRtt 0.1.3
 
+* includes optimiser function
 
 # NHSRtt 0.1.2
 
