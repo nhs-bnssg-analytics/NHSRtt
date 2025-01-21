@@ -2,9 +2,11 @@
 % Please edit documentation in R/modelling.R
 \name{apply_params_to_projections}
 \alias{apply_params_to_projections}
-\title{Apply the months waited parameters for renege and capacity to projections and
-capacity and referrals If needed, or if validating your parameters, include
-projections for incomplete pathways per period}
+\title{Apply the parameters for renege and capacity (by months waited) to
+projections of capacity and referrals. If needed, or if validating your
+parameters, include the observed incomplete pathways by the number of months
+waited for the period prior to the period being projected (eg, a starting
+position)}
 \usage{
 apply_params_to_projections(
   capacity_projections,
@@ -42,9 +44,11 @@ a tibble with fields for period_id, months_waited_id,
   calculated_treatments, reneges, incompletes and input_treatments
 }
 \description{
-Apply the months waited parameters for renege and capacity to projections and
-capacity and referrals If needed, or if validating your parameters, include
-projections for incomplete pathways per period
+Apply the parameters for renege and capacity (by months waited) to
+projections of capacity and referrals. If needed, or if validating your
+parameters, include the observed incomplete pathways by the number of months
+waited for the period prior to the period being projected (eg, a starting
+position)
 }
 \examples{
 max_months <- 4

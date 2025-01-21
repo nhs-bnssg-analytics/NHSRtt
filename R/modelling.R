@@ -199,9 +199,11 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
   return(reneg_cap)
 }
 
-#' Apply the months waited parameters for renege and capacity to projections and
-#' capacity and referrals If needed, or if validating your parameters, include
-#' projections for incomplete pathways per period
+#' Apply the parameters for renege and capacity (by months waited) to
+#' projections of capacity and referrals. If needed, or if validating your
+#' parameters, include the observed incomplete pathways by the number of months
+#' waited for the period prior to the period being projected (eg, a starting
+#' position)
 #'
 #' @param capacity_projections numeric; vector of projections for capacity for
 #'   each time step. This must be the same length as referrals_projections
