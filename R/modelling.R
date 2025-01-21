@@ -97,7 +97,6 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
   if (!identical(dim(completes), dim(incompletes)))
     stop("completes and incompletes should have the same dimensions")
 
-
   # check for missing time periods within data
   expected_period_ids <- seq(
     from = min(
@@ -176,6 +175,12 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 
   if (!isTRUE(full_breakdown)) {
     reneg_cap <- reneg_cap |>
+      mutate(
+        across(
+          c("renege_param", "capacity_param"),
+          ~ if_else(.data$node_inflow == 0, 0, .x)
+        )
+      ) |>
       summarise(
         across(
           c("renege_param", "capacity_param"),
