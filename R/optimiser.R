@@ -51,6 +51,12 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
     stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
 
+  # check values of capacity_param
+  if (sum(renege_capacity_params[["capacity_param"]]) == 0) {
+    warning("Unable to optimise as no treatments in the calibration period")
+    return(NA)
+  }
+
   # check whether target_bin is less than the greatest number of months waited
   # in the incompletes dataset
   max_months_waited <- max(incomplete_pathways[["months_waited_id"]])
