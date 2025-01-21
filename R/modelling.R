@@ -17,7 +17,7 @@
 #' @param full_breakdown logical; include a full breakdown of monthly
 #'   transitions by period. FALSE provides the parameters by months_waited_id
 #'   only
-#' @importFrom dplyr setdiff across summarise count filter
+#' @importFrom dplyr setdiff across summarise count filter if_else
 #' @importFrom rlang .data
 #' @export
 #'
