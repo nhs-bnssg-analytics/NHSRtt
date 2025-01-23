@@ -46,11 +46,6 @@ test_that("redistribute_incompletes_evenly works", {
     label = "there are no negative values returned from the redistribute_incompletes_evenly function"
   )
 
-  expect_warning(
-    redistribute_incompletes_evenly(-5:2),
-    "surplus of treatments and reneges exceeds the number of people waiting for treatment"
-  )
-
 })
 
 test_that("redistribute_incompletes_optimally works", {

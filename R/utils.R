@@ -254,7 +254,6 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
 redistribute_incompletes_evenly <- function(incomplete_counts) {
 
   if (sum(incomplete_counts) < 0) {
-    warning("surplus of treatments and reneges exceeds the number of people waiting for treatment")
     # force the negatives to 0
     incomplete_counts <- rep(0, length(incomplete_counts))
   } else {
