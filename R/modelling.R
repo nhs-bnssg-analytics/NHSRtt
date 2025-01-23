@@ -375,6 +375,11 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         capacity_denominator = sum(.data$capacity_numerator),
         calculated_treatments = .data$input_treatments *
           .data$capacity_numerator / .data$capacity_denominator,
+        # capacity parameter can be 0, resulting in NaN calculated treatments
+        calculated_treatments = case_when(
+          is.na(calculated_treatments) ~ 0,
+          .default = calculated_treatments
+        ),
         incompletes = .data$node_inflow -
           .data$calculated_treatments - .data$reneges,
         # redistribute the negative incompletes into the positive incompletes so

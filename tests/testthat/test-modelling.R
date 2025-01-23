@@ -368,7 +368,8 @@ test_that("apply_params_to_projections functionality", {
                      -4.25999018821329, -4.32030318523386),
     capacity_param = c(0.5196652828326, 2.55465828915496, 4.3484007188955,
                        4.38332515684441, 4.43358598769489)
-  )
+  ) |>
+    mutate(capacity_param = 0)
 
   projections <- apply_params_to_projections(
     capacity_projections = future_capacity,
@@ -414,6 +415,46 @@ test_that("apply_params_to_projections functionality", {
     projections,
     expected,
     info = "apply_params_to_projections is consistently working"
+  )
+
+  params <- dplyr::tibble(
+    months_waited_id = 0:4,
+    renege_param = c(0.37640166060088, -2.06558994698596, -4.2180808626746,
+                     -4.25999018821329, -4.32030318523386),
+    capacity_param = rep(0, 5)
+  )
+
+  projections <- apply_params_to_projections(
+    capacity_projections = future_capacity,
+    referrals_projections = future_referrals,
+    incomplete_pathways = incompletes_t0,
+    renege_capacity_params = params,
+    max_months_waited = max_months
+  )
+
+  expect_true(
+    all(colSums(is.na(projections)) == 0),
+    info = "apply_params_to_projections functions when all capacity parameters are 0"
+  )
+
+  params <- dplyr::tibble(
+    months_waited_id = 0:4,
+    renege_param = rep(0, 5),
+    capacity_param = c(0.5196652828326, 2.55465828915496, 4.3484007188955,
+                       4.38332515684441, 4.43358598769489)
+  )
+
+  projections <- apply_params_to_projections(
+    capacity_projections = future_capacity,
+    referrals_projections = future_referrals,
+    incomplete_pathways = incompletes_t0,
+    renege_capacity_params = params,
+    max_months_waited = max_months
+  )
+
+  expect_true(
+    all(colSums(is.na(projections)) == 0),
+    info = "apply_params_to_projections functions when all renege parameters are 0"
   )
 
   # this scenario needs looking at: eg, where no incompletes are passed to the
