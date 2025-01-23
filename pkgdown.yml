@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   animated-charts: animated-charts.html
   rtt-pipeline: rtt-pipeline.html
-last_built: 2025-01-23T14:11Z
+last_built: 2025-01-23T14:44Z
 urls:
   reference: https://nhs-bnssg-analytics.github.io/NHSRtt/reference
   article: https://nhs-bnssg-analytics.github.io/NHSRtt/articles
