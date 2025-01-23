@@ -51,6 +51,12 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
     stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
 
+  # check values of capacity_param
+  if (all(renege_capacity_params[["capacity_param"]] == 0)) {
+    warning("Unable to optimise as no treatments in the calibration period")
+    return(NA)
+  }
+
   # check whether target_bin is less than the greatest number of months waited
   # in the incompletes dataset
   max_months_waited <- max(incomplete_pathways[["months_waited_id"]])
@@ -114,6 +120,7 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   change_proportion <- 1
   converged <- FALSE
   iteration <- 1
+  last_iteration_proportion <- NA
 
   # adjustment is the amount to adjust the change_proportion when attempting to
   # converge; starts at 1
@@ -182,11 +189,20 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       converged <- TRUE
     } else {
       iteration <- iteration + 1
+
+      if (isTRUE(last_iteration_proportion == proportion_at_highest_bin)) {
+        warning("parameter distribution means optimiser cannot meet target")
+        converged <- TRUE
+        change_proportion <- Inf
+      }
+      last_iteration_proportion <- proportion_at_highest_bin
+
       if (iteration > max_iterations) {
         warning("optimiser failed to converge before maximum iteration reached")
         converged <- TRUE # set to true so while loop is exited
-        change_proportion <- NA_real_
+        change_proportion <- NaN
       }
+
       if (compare_with_target > 0) {
         above_target <- TRUE
 

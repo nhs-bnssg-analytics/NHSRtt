@@ -255,6 +255,21 @@ test_that("optimise_capacity functionality", {
     info = "optimise_capacity fails to converge within given constraints"
   )
 
+  expect_warning(
+    optimise_capacity(
+      t_1_capacity = future_capacity,
+      referrals_projections = future_referrals,
+      incomplete_pathways = incompletes_t0,
+      renege_capacity_params = params |>
+        mutate(capacity_param = 0),
+      target_bin = max_months,
+      target = "~-2%",
+      tolerance = 0.005
+    ),
+    "Unable to optimise as no treatments in the calibration period",
+    info = "No treatments in calibration period prevents optimisation ability"
+  )
+
 
 })
 
