@@ -286,6 +286,14 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
   if (length(capacity_projections) != length(referrals_projections))
     stop("capacity_projections and referrals_projections must be the same length")
 
+  # check for negative referrals
+  if (any(referrals_projections < 0))
+    stop("referrals_projections must all be greater or equal to zero")
+
+  # check for negative capacity
+  if (any(capacity_projections < 0))
+    stop("capacity_projections must all be greater or equal to zero")
+
   # check numeric inputs for max_months_waited
   if (!is.numeric(max_months_waited))
     stop("max_months_waited must be an integer")

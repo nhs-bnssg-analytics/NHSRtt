@@ -345,6 +345,31 @@ test_that("apply_params_to_projections errors", {
     "incomplete_pathways must have field names of 'months_waited_id' and 'incompletes'",
     info = "correct field names for incomplete_pathways"
   )
+
+  expect_error(
+    apply_params_to_projections(
+      capacity_projections = future_capacity * -1,
+      referrals_projections = future_referrals,
+      incomplete_pathways = incompletes_t0,
+      renege_capacity_params = params,
+      max_months_waited = max_months
+    ),
+    "capacity_projections must all be greater or equal to zero",
+    info = "negative capacity"
+  )
+
+  expect_error(
+    apply_params_to_projections(
+      capacity_projections = future_capacity,
+      referrals_projections = future_referrals * -1,
+      incomplete_pathways = incompletes_t0,
+      renege_capacity_params = params,
+      max_months_waited = max_months
+    ),
+    "referrals_projections must all be greater or equal to zero",
+    info = "negative referrals"
+  )
+
 })
 
 test_that("apply_params_to_projections functionality", {
@@ -368,8 +393,7 @@ test_that("apply_params_to_projections functionality", {
                      -4.25999018821329, -4.32030318523386),
     capacity_param = c(0.5196652828326, 2.55465828915496, 4.3484007188955,
                        4.38332515684441, 4.43358598769489)
-  ) |>
-    mutate(capacity_param = 0)
+  )
 
   projections <- apply_params_to_projections(
     capacity_projections = future_capacity,
