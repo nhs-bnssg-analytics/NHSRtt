@@ -13,7 +13,8 @@ apply_params_to_projections(
   referrals_projections,
   incomplete_pathways = NULL,
   renege_capacity_params,
-  max_months_waited
+  max_months_waited,
+  surplus_treatment_redistribution_method = "evenly"
 )
 }
 \arguments{
@@ -38,6 +39,11 @@ renege_param, which are outputs from the function
 \item{max_months_waited}{integer; the maximum number of months to group
 patients waiting times by for the analysis. Data are published up to 104
 weeks, so 24 is likely to be the maximum useful value for this argument.}
+
+\item{surplus_treatment_redistribution_method}{string; one of "none",
+"evenly" or "prioritise_long_waiters"; should cases where the counts of
+reneges and treatments exceed the counts of people waiting be
+redistributed, and if so, which method should be used}
 }
 \value{
 a tibble with fields for period_id, months_waited_id,

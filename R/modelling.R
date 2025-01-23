@@ -222,6 +222,10 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #' @param max_months_waited integer; the maximum number of months to group
 #'   patients waiting times by for the analysis. Data are published up to 104
 #'   weeks, so 24 is likely to be the maximum useful value for this argument.
+#' @param surplus_treatment_redistribution_method string; one of "none",
+#'   "evenly" or "prioritise_long_waiters"; should cases where the counts of
+#'   reneges and treatments exceed the counts of people waiting be
+#'   redistributed, and if so, which method should be used
 #'
 #' @importFrom rlang .data
 #' @importFrom dplyr distinct bind_rows left_join tibble join_by mutate
@@ -280,7 +284,8 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #' )
 apply_params_to_projections <- function(capacity_projections, referrals_projections,
                                         incomplete_pathways = NULL, renege_capacity_params,
-                                        max_months_waited) {
+                                        max_months_waited,
+                                        surplus_treatment_redistribution_method = "evenly") {
 
   # check lengths of inputs
   if (length(capacity_projections) != length(referrals_projections))
