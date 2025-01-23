@@ -400,11 +400,12 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
           is.na(.data$calculated_treatments) ~ 0,
           .default = .data$calculated_treatments
         ),
-        incompletes = .data$node_inflow -
-          .data$calculated_treatments - .data$reneges,
-        # redistribute the negative incompletes into the positive incompletes so
-        # there are no negative incompletes in a timestep
-        incompletes = redistribute_incompletes(.data$incompletes)
+        incompletes = calculate_incompletes(
+          inflow = .data$node_inflow,
+          reneges = .data$reneges,
+          treatments = .data$calculated_treatments,
+          redistribution_method = surplus_treatment_redistribution_method
+        )
       )
 
     # recreate the incomplete_pathways tibble for the next period
