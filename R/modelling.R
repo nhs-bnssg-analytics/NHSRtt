@@ -17,7 +17,7 @@
 #' @param full_breakdown logical; include a full breakdown of monthly
 #'   transitions by period. FALSE provides the parameters by months_waited_id
 #'   only
-#' @importFrom dplyr setdiff across summarise count filter
+#' @importFrom dplyr setdiff across summarise count filter if_else
 #' @importFrom rlang .data
 #' @export
 #'
@@ -97,7 +97,6 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
   if (!identical(dim(completes), dim(incompletes)))
     stop("completes and incompletes should have the same dimensions")
 
-
   # check for missing time periods within data
   expected_period_ids <- seq(
     from = min(
@@ -176,6 +175,12 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 
   if (!isTRUE(full_breakdown)) {
     reneg_cap <- reneg_cap |>
+      mutate(
+        across(
+          c("renege_param", "capacity_param"),
+          ~ if_else(.data$node_inflow == 0, 0, .x)
+        )
+      ) |>
       summarise(
         across(
           c("renege_param", "capacity_param"),
@@ -194,9 +199,11 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
   return(reneg_cap)
 }
 
-#' Apply the months waited parameters for renege and capacity to projections and
-#' capacity and referrals If needed, or if validating your parameters, include
-#' projections for incomplete pathways per period
+#' Apply the parameters for renege and capacity (by months waited) to
+#' projections of capacity and referrals. If needed, or if validating your
+#' parameters, include the observed incomplete pathways by the number of months
+#' waited for the period prior to the period being projected (eg, a starting
+#' position)
 #'
 #' @param capacity_projections numeric; vector of projections for capacity for
 #'   each time step. This must be the same length as referrals_projections
@@ -215,6 +222,10 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #' @param max_months_waited integer; the maximum number of months to group
 #'   patients waiting times by for the analysis. Data are published up to 104
 #'   weeks, so 24 is likely to be the maximum useful value for this argument.
+#' @param surplus_treatment_redistribution_method string; one of "none",
+#'   "evenly" or "prioritise_long_waiters"; should cases where the counts of
+#'   reneges and treatments exceed the counts of people waiting be
+#'   redistributed, and if so, which method should be used
 #'
 #' @importFrom rlang .data
 #' @importFrom dplyr distinct bind_rows left_join tibble join_by mutate
@@ -273,11 +284,20 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #' )
 apply_params_to_projections <- function(capacity_projections, referrals_projections,
                                         incomplete_pathways = NULL, renege_capacity_params,
-                                        max_months_waited) {
+                                        max_months_waited,
+                                        surplus_treatment_redistribution_method = "evenly") {
 
   # check lengths of inputs
   if (length(capacity_projections) != length(referrals_projections))
     stop("capacity_projections and referrals_projections must be the same length")
+
+  # check for negative referrals
+  if (any(referrals_projections < 0))
+    stop("referrals_projections must all be greater or equal to zero")
+
+  # check for negative capacity
+  if (any(capacity_projections < 0))
+    stop("capacity_projections must all be greater or equal to zero")
 
   # check numeric inputs for max_months_waited
   if (!is.numeric(max_months_waited))
@@ -375,11 +395,17 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         capacity_denominator = sum(.data$capacity_numerator),
         calculated_treatments = .data$input_treatments *
           .data$capacity_numerator / .data$capacity_denominator,
-        incompletes = .data$node_inflow -
-          .data$calculated_treatments - .data$reneges,
-        # redistribute the negative incompletes into the positive incompletes so
-        # there are no negative incompletes in a timestep
-        incompletes = redistribute_incompletes(.data$incompletes)
+        # capacity parameter can be 0, resulting in NaN calculated treatments
+        calculated_treatments = case_when(
+          is.na(.data$calculated_treatments) ~ 0,
+          .default = .data$calculated_treatments
+        ),
+        incompletes = calculate_incompletes(
+          inflow = .data$node_inflow,
+          reneges = .data$reneges,
+          treatments = .data$calculated_treatments,
+          redistribution_method = surplus_treatment_redistribution_method
+        )
       )
 
     # recreate the incomplete_pathways tibble for the next period

@@ -2,16 +2,19 @@
 % Please edit documentation in R/modelling.R
 \name{apply_params_to_projections}
 \alias{apply_params_to_projections}
-\title{Apply the months waited parameters for renege and capacity to projections and
-capacity and referrals If needed, or if validating your parameters, include
-projections for incomplete pathways per period}
+\title{Apply the parameters for renege and capacity (by months waited) to
+projections of capacity and referrals. If needed, or if validating your
+parameters, include the observed incomplete pathways by the number of months
+waited for the period prior to the period being projected (eg, a starting
+position)}
 \usage{
 apply_params_to_projections(
   capacity_projections,
   referrals_projections,
   incomplete_pathways = NULL,
   renege_capacity_params,
-  max_months_waited
+  max_months_waited,
+  surplus_treatment_redistribution_method = "evenly"
 )
 }
 \arguments{
@@ -36,15 +39,22 @@ renege_param, which are outputs from the function
 \item{max_months_waited}{integer; the maximum number of months to group
 patients waiting times by for the analysis. Data are published up to 104
 weeks, so 24 is likely to be the maximum useful value for this argument.}
+
+\item{surplus_treatment_redistribution_method}{string; one of "none",
+"evenly" or "prioritise_long_waiters"; should cases where the counts of
+reneges and treatments exceed the counts of people waiting be
+redistributed, and if so, which method should be used}
 }
 \value{
 a tibble with fields for period_id, months_waited_id,
   calculated_treatments, reneges, incompletes and input_treatments
 }
 \description{
-Apply the months waited parameters for renege and capacity to projections and
-capacity and referrals If needed, or if validating your parameters, include
-projections for incomplete pathways per period
+Apply the parameters for renege and capacity (by months waited) to
+projections of capacity and referrals. If needed, or if validating your
+parameters, include the observed incomplete pathways by the number of months
+waited for the period prior to the period being projected (eg, a starting
+position)
 }
 \examples{
 max_months <- 4

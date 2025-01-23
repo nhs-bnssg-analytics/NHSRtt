@@ -51,6 +51,12 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
     stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
 
+  # check values of capacity_param
+  if (all(renege_capacity_params[["capacity_param"]] == 0)) {
+    warning("Unable to optimise as no treatments in the calibration period")
+    return(NA)
+  }
+
   # check whether target_bin is less than the greatest number of months waited
   # in the incompletes dataset
   max_months_waited <- max(incomplete_pathways[["months_waited_id"]])
@@ -104,6 +110,11 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     ) |>
     pull(.data$prop)
 
+  # if there are no incompletes in final bin (eg, current_val is NaN), need to
+  # set current_val to 0
+  if (is.nan(current_val))
+    current_val <- 0
+
   target_val <- parse_number(target) / 100
 
   if (grepl("~", target)) {
@@ -111,9 +122,16 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     target_val <- current_val + target_val
   }
 
+  # set target_val to 0 if it is negative
+  if (target_val < 0) target_val <- 0
+
+  # set target_val to 100% if over 100%
+  if (target_val > 1) target_val <- 1
+
   change_proportion <- 1
   converged <- FALSE
   iteration <- 1
+  last_iteration_proportion <- NA
 
   # adjustment is the amount to adjust the change_proportion when attempting to
   # converge; starts at 1
@@ -139,6 +157,9 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     ) |>
       unname()
 
+    # floor the data at 0 because negative capacity is not possible
+    capacity_projections[capacity_projections < 0] <- 0
+
 
     proportion_at_highest_bin <- apply_params_to_projections(
       capacity_projections = capacity_projections,
@@ -159,16 +180,22 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       summarise(
         incompletes = sum(.data$incompletes),
         .by = "months_waited_id"
-      ) |>
-      mutate(
-        proportion_incomplete = .data$incompletes / sum(.data$incompletes)
-      ) |>
-      filter(
-        .data$months_waited_id == target_bin
-      ) |>
-      pull(
-        .data$proportion_incomplete
       )
+
+    if (sum(proportion_at_highest_bin[["incompletes"]]) == 0) {
+      proportion_at_highest_bin <- 0
+    } else {
+      proportion_at_highest_bin <- proportion_at_highest_bin |>
+        mutate(
+          proportion_incomplete = .data$incompletes / sum(.data$incompletes)
+        ) |>
+        filter(
+          .data$months_waited_id == target_bin
+        ) |>
+        pull(
+          .data$proportion_incomplete
+        )
+    }
 
     compare_with_target <- (proportion_at_highest_bin - target_val)
 
@@ -176,11 +203,20 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       converged <- TRUE
     } else {
       iteration <- iteration + 1
+
+      if (isTRUE(last_iteration_proportion == proportion_at_highest_bin)) {
+        warning("parameter distribution means optimiser cannot meet target")
+        converged <- TRUE
+        change_proportion <- Inf
+      }
+      last_iteration_proportion <- proportion_at_highest_bin
+
       if (iteration > max_iterations) {
         warning("optimiser failed to converge before maximum iteration reached")
         converged <- TRUE # set to true so while loop is exited
-        change_proportion <- NA_real_
+        change_proportion <- NaN
       }
+
       if (compare_with_target > 0) {
         above_target <- TRUE
 

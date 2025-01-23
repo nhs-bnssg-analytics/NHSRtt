@@ -245,15 +245,17 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
   return(transitions)
 }
 
-#' Redistribute the counts of incompletes within a vector where they are
-#' negative into the positive values
-#' @param incomplete_counts numeric; vector of incomplete counts
-redistribute_incompletes <- function(incomplete_counts) {
+#' Redistribute cases where there are more treatments and reneges than people in
+#' a particular bin for a particular period. This function chooses the
+#' redistribute the surplus treatment to the people waiting the longest first
+#'
+#' @param incomplete_counts numeric; vector of incomplete counts for a bin for a
+#'   period
+redistribute_incompletes_evenly <- function(incomplete_counts) {
 
   if (sum(incomplete_counts) < 0) {
-    warning("not possible to redistribute incompletes because the sum of incompletes is negative")
     # force the negatives to 0
-    incomplete_counts[incomplete_counts < 0] <- 0
+    incomplete_counts <- rep(0, length(incomplete_counts))
   } else {
     while (any(incomplete_counts < 0)) {
       # total negative counts
@@ -277,6 +279,84 @@ redistribute_incompletes <- function(incomplete_counts) {
     }
   }
   return(incomplete_counts)
+}
+
+#' Redistribute cases where there are more treatments and reneges than people in
+#' a particular bin for a particular period. This function chooses the
+#' redistribute the surplus treatment to the people waiting the longest first
+#'
+#' @param incomplete_counts numeric; vector of count of patients with an incomplete
+#'   pathway within a bin in a period in order of lowest to highest bin
+#'
+redistribute_incompletes_optimally <- function(incomplete_counts) {
+
+  # reallocate surplus treatments to highest bins that still require treatment
+
+  # calculate total surplus treatments
+  total_surplus_treatments <- abs(sum(incomplete_counts[incomplete_counts < 0]))
+  surplus_indices <- incomplete_counts < 0 # used later for amending the surplus
+
+  surplus_treatments <- total_surplus_treatments
+  if (total_surplus_treatments > 0) {
+    for (i in rev(seq_len(length(incomplete_counts)))) {
+      waiting_in_bin <- incomplete_counts[i]
+
+      if (waiting_in_bin > 0 & surplus_treatments > 0) {
+        # what number from the bin can be treated
+        n_treatments <- min(waiting_in_bin, surplus_treatments)
+
+        # treat the patients waiting in the bin
+        incomplete_counts[i] <- incomplete_counts[i] - n_treatments
+
+        # adjust the number of surplus_treatments
+        surplus_treatments <- surplus_treatments - n_treatments
+      }
+
+    }
+
+    # proportionally redistribute the remaining surplus to the bins that
+    # originally had surplus
+    incomplete_counts[surplus_indices] <- surplus_treatments *
+      (incomplete_counts[surplus_indices] / total_surplus_treatments)
+  }
+  return(incomplete_counts)
+}
+
+
+#' Calculate the number of incomplete pathways in a bin from the inflow, reneges
+#' and treatments. Following the calculations, apply an optional redistribution
+#' of the occasions where incompletes are negative (eg, more treatments have
+#' been performed than there were people).
+#'
+#' @param inflow numeric; vector of count of patients moving into a bin in a
+#'   period in order of lowest to highest bin
+#' @param reneges numeric; vector of count of patients reneging from a bin in a
+#'   period in order of lowest to highest bin
+#' @param treatments numeric; vector of count of patients being treated from a
+#'   bin in a period in order of lowest to highest bin
+#' @param redistribution_method string; one of "none", "evenly" or
+#'   "prioritise_long_waiters"
+#'
+calculate_incompletes <- function(inflow, reneges, treatments, redistribution_method) {
+
+  redistribution_method <- match.arg(
+    redistribution_method,
+    c("none",
+      "evenly",
+      "prioritise_long_waiters")
+  )
+
+  incompletes <- inflow - treatments - reneges
+
+  if (redistribution_method == "none") {
+    return(incompletes)
+  } else if (redistribution_method == "evenly") {
+    incompletes <- redistribute_incompletes_evenly(incompletes)
+  } else if (redistribution_method == "prioritise_long_waiters") {
+    incompletes <- redistribute_incompletes_optimally(incompletes)
+  }
+
+  return(incompletes)
 }
 
 #' create distribution of data points based on a weibull curve
