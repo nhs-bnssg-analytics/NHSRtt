@@ -291,6 +291,14 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
   if (length(capacity_projections) != length(referrals_projections))
     stop("capacity_projections and referrals_projections must be the same length")
 
+  # check for negative referrals
+  if (any(referrals_projections < 0))
+    stop("referrals_projections must all be greater or equal to zero")
+
+  # check for negative capacity
+  if (any(capacity_projections < 0))
+    stop("capacity_projections must all be greater or equal to zero")
+
   # check numeric inputs for max_months_waited
   if (!is.numeric(max_months_waited))
     stop("max_months_waited must be an integer")
@@ -387,12 +395,16 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         capacity_denominator = sum(.data$capacity_numerator),
         calculated_treatments = .data$input_treatments *
           .data$capacity_numerator / .data$capacity_denominator,
-        incompletes = calculate_incompletes(
-          inflow = .data$node_inflow,
-          reneges = .data$reneges,
-          treatments = .data$calculated_treatments,
-          redistribution_method = surplus_treatment_redistribution_method
-        )
+        # capacity parameter can be 0, resulting in NaN calculated treatments
+        calculated_treatments = case_when(
+          is.na(.data$calculated_treatments) ~ 0,
+          .default = .data$calculated_treatments
+        ),
+        incompletes = .data$node_inflow -
+          .data$calculated_treatments - .data$reneges,
+        # redistribute the negative incompletes into the positive incompletes so
+        # there are no negative incompletes in a timestep
+        incompletes = redistribute_incompletes(.data$incompletes)
       )
 
     # recreate the incomplete_pathways tibble for the next period

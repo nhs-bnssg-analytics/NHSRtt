@@ -110,12 +110,23 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     ) |>
     pull(.data$prop)
 
+  # if there are no incompletes in final bin (eg, current_val is NaN), need to
+  # set current_val to 0
+  if (is.nan(current_val))
+    current_val <- 0
+
   target_val <- parse_number(target) / 100
 
   if (grepl("~", target)) {
     # if tilde in target string, then make the target a relative number
     target_val <- current_val + target_val
   }
+
+  # set target_val to 0 if it is negative
+  if (target_val < 0) target_val <- 0
+
+  # set target_val to 100% if over 100%
+  if (target_val > 1) target_val <- 1
 
   change_proportion <- 1
   converged <- FALSE
@@ -145,6 +156,9 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       newdata = tibble(period = 1:length(referrals_projections))
     ) |>
       unname()
+
+    # floor the data at 0 because negative capacity is not possible
+    capacity_projections[capacity_projections < 0] <- 0
 
 
     proportion_at_highest_bin <- apply_params_to_projections(
