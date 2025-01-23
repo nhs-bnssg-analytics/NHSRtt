@@ -1,4 +1,7 @@
-# NHSRtt 0.1.3.9000
+# NHSRtt 0.1.4
+
+* bug fixes and edge case management
+* allows surplus capacity to be allocated to longest waiters rather than spreading it evenly
 
 # NHSRtt 0.1.3
 
