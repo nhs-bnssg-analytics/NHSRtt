@@ -1,3 +1,7 @@
+# NHSRtt 0.1.5
+
+* includes non-admitted data in get_rtt_data which was accidentally being excluded
+
 # NHSRtt 0.1.4
 
 * bug fixes and edge case management
