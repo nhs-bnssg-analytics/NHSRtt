@@ -181,7 +181,7 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
 
   referrals <- referrals |>
     dplyr::filter(
-      .data$period_id > 0 # not need for input at timestep t-1
+      .data$period_id > 0 # no need for input at timestep t-1
     ) |>
     mutate(
       months_waited_id = 0

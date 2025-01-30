@@ -377,6 +377,7 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
           node_inflow = referrals_projections[period]
         )
       ) |>
+      arrange(months_waited_id) |>
       # add in the projections for  capacity
       mutate(
         capacity = capacity_projections[period]

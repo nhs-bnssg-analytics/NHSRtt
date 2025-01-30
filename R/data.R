@@ -101,7 +101,7 @@ get_rtt_data <- function(type, url = "https://www.england.nhs.uk/statistics/stat
     type_filter <- "New Periods"
   }
 
-  xl_files <- xl_files[grepl(paste0("^", type_filter), names(xl_files))]
+  xl_files <- xl_files[grepl(type_filter, names(xl_files))]
 
   # filter for dates
   dts <- as.Date(paste0("01", substr_right(names(xl_files), 5)), "%d%b%y")
