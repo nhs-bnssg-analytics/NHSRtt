@@ -55,7 +55,11 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   # check values of capacity_param
   if (all(renege_capacity_params[["capacity_param"]] == 0)) {
     warning("Unable to optimise as no treatments in the calibration period")
-    return(NA)
+    change_proportion <- setNames(
+      NA,
+      nm = "no_calibration_treatments"
+    )
+    return(change_proportion)
   }
 
   # check whether target_bin is less than the greatest number of months waited
@@ -90,6 +94,15 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
   if (length(tolerance) > 1)
     stop("tolerance must be length 1")
+
+  # if no t_1 capacity then multiplier will not work
+  if (t_1_capacity == 0) {
+    change_proportion <- setNames(
+      NA,
+      nm = "no_starting_capacity"
+    )
+    return(change_proportion)
+  }
 
   # target calculation
   current_val <- incomplete_pathways |>
@@ -270,6 +283,6 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       }
     }
   }
-# browser()
+
   return(change_proportion)
 }
