@@ -22,7 +22,8 @@
 #'
 #' @returns a capacity multiplier representing the annual change in capacity
 #'   (from the input t_1_capacity to a capacity at t = 13) to achieve the
-#'   desired target within the target tolerance
+#'   desired target within the target tolerance. The name of the returned object
+#'   provides an indication of whether the optimiser converged
 #' @export
 #'
 optimise_capacity <- function(t_1_capacity, referrals_projections,
@@ -54,7 +55,11 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   # check values of capacity_param
   if (all(renege_capacity_params[["capacity_param"]] == 0)) {
     warning("Unable to optimise as no treatments in the calibration period")
-    return(NA)
+    change_proportion <- setNames(
+      NA,
+      nm = "no_calibration_treatments"
+    )
+    return(change_proportion)
   }
 
   # check whether target_bin is less than the greatest number of months waited
@@ -89,6 +94,15 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
   if (length(tolerance) > 1)
     stop("tolerance must be length 1")
+
+  # if no t_1 capacity then multiplier will not work
+  if (t_1_capacity == 0) {
+    change_proportion <- setNames(
+      NA,
+      nm = "no_starting_capacity"
+    )
+    return(change_proportion)
+  }
 
   # target calculation
   current_val <- incomplete_pathways |>
@@ -142,6 +156,10 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   above_target <- FALSE
   below_target <- FALSE
 
+  # for gradients that treat the whole waiting list, we want to find the minimum
+  # gradient that achieves that, so we set a starting value of NULL
+  min_change_proportion <- NULL
+
   while (converged == FALSE) {
     # build linear model for monthly capacity
     lm_fit <- stats::lm(
@@ -183,7 +201,9 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       )
 
     if (sum(proportion_at_highest_bin[["incompletes"]]) == 0) {
+      # this part of statement means the total on the waiting list is zero
       proportion_at_highest_bin <- 0
+      min_change_proportion <- min(min_change_proportion, change_proportion)
     } else {
       proportion_at_highest_bin <- proportion_at_highest_bin |>
         mutate(
@@ -201,20 +221,43 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
     if (abs(compare_with_target) < tolerance) {
       converged <- TRUE
+      change_proportion <- setNames(
+        change_proportion,
+        nm = "converged"
+      )
     } else {
       iteration <- iteration + 1
 
-      if (isTRUE(last_iteration_proportion == proportion_at_highest_bin)) {
+      if (isTRUE(last_iteration_proportion == proportion_at_highest_bin) &
+          !(proportion_at_highest_bin %in% c(0, 1))) {
+
         warning("parameter distribution means optimiser cannot meet target")
         converged <- TRUE
         change_proportion <- Inf
+        change_proportion <- setNames(
+          change_proportion,
+          nm = "not_converged_check"
+        )
       }
       last_iteration_proportion <- proportion_at_highest_bin
 
       if (iteration > max_iterations) {
         warning("optimiser failed to converge before maximum iteration reached")
         converged <- TRUE # set to true so while loop is exited
-        change_proportion <- NaN
+
+        if (is.null(min_change_proportion)) {
+          change_proportion <- NaN
+          change_proportion <- setNames(
+            change_proportion,
+            nm = "not_converged"
+          )
+        } else {
+          change_proportion <- min(change_proportion)
+          change_proportion <- setNames(
+            change_proportion,
+            nm = "waitlist_cleared"
+          )
+        }
       }
 
       if (compare_with_target > 0) {

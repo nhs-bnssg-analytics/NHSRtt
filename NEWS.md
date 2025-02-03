@@ -1,5 +1,9 @@
-# NHSRtt 0.1.4.9000
 
+# NHSRtt 0.1.5.9000
+
+# NHSRtt 0.1.5
+
+* includes non-admitted data in get_rtt_data which was accidentally being excluded
 
 # NHSRtt 0.1.4
 

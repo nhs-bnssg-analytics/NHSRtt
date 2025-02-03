@@ -51,7 +51,8 @@ convergence before providing a warning and an invalid number}
 \value{
 a capacity multiplier representing the annual change in capacity
   (from the input t_1_capacity to a capacity at t = 13) to achieve the
-  desired target within the target tolerance
+  desired target within the target tolerance. The name of the returned object
+  provides an indication of whether the optimiser converged
 }
 \description{
 Optimise the capacity profile for projections

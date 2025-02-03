@@ -319,7 +319,7 @@ test_that("optimise_capacity functionality", {
       target = "~-2%",
       tolerance = 0.005
     ),
-    0.71875,
+    c(converged = 0.71875),
     info = "optimise_capacity consistently produces an answer"
   )
 })
