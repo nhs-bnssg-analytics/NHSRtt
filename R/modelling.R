@@ -229,7 +229,7 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #'
 #' @importFrom rlang .data
 #' @importFrom dplyr distinct bind_rows left_join tibble join_by mutate
-#'   case_when summarise select
+#'   case_when summarise select arrange
 #' @importFrom tidyr replace_na
 #'
 #' @return a tibble with fields for period_id, months_waited_id,
@@ -377,7 +377,7 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
           node_inflow = referrals_projections[period]
         )
       ) |>
-      arrange(months_waited_id) |>
+      dplyr::arrange(months_waited_id) |>
       # add in the projections for  capacity
       mutate(
         capacity = capacity_projections[period]
