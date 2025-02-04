@@ -31,50 +31,61 @@ obtain_links <- function(url) {
   return(links)
 }
 
-
-#' Subset string from the right
+#' Subset mmmyy from a string
 #'
 #' @param x the string
-#' @param n integer; number of letters to subset from on the right
 #'
-#' @return subsetted string
-#'
-substr_right <- function(x, n){
-  substr(x, nchar(x) - n + 1, nchar(x))
+#' @return subsetted string in the format "mmmyy"
+#' @noRd
+extract_monyr <- function(x) {
+  start_character <- regexpr(
+    pattern = "[[:alpha:]]{3}[[:digit:]]{2}",
+    text = x
+  ) |>
+    as.numeric()
+
+  monyr <- substr(
+    x, start_character, start_character + 4
+  )
+
+  return(monyr)
 }
 
 
-#' Download a file from a url to a temporary file
-#'
-#' @param excel_url sting; url of the file. Must have an xlsx or xls extension
-#' @param filename string; name of file
-#' @importFrom tools file_ext
-#' @importFrom utils download.file
-#' @return filepath to where the temporary file is stored
-download_temp_file <- function(excel_url, filename) {
+#' @param zip_url string; url of zip file for downloading and unzipping
+#' @importFrom dplyr pull
+#' @importFrom utils download.file unzip
+#' @importFrom rlang .data
+#' @return file path location of the csv file stored in the zip file
+#' @noRd
+download_unzip_files <- function(zip_url) {
+  # if (!isTRUE(file.info(directory)$isdir))
+  #   dir.create(directory, recursive = TRUE)
   temporary_directory <- tempdir()
-  temp_file <- paste0(
-    temporary_directory,
-    "/",
-    filename,
-    ".",
-    tools::file_ext(excel_url)
-  )
-  # tmp_file <- tempfile(
-  #   pattern = names(excel_url),
-  #   fileext = tools::file_ext(excel_url)
-  # )
+  temp <- tempfile()
 
   download.file(
-    url = excel_url,
-    destfile = temp_file,
-    quiet = TRUE,
-    mode = "wb"
+    zip_url,
+    temp,
+    quiet = TRUE
   )
 
-  return(temp_file)
-}
+  zipped_files <- unzip(
+    zipfile = temp,
+    list = TRUE
+  ) |>
+    dplyr::pull(.data$Name)
 
+  extracted_files <- unzip(
+    zipfile = temp,
+    files = zipped_files,
+    exdir = temporary_directory
+  )
+
+  unlink(temp)
+
+  return(extracted_files)
+}
 
 # data processing ---------------------------------------------------------
 
@@ -371,6 +382,67 @@ weibull_sample <- function(x) {
 }
 
 
+#' Pivot the parameters passed into the function so relationships between the
+#' parameters remain consistent but giving control to providing more or less
+#' focus on extreme bins
+#'
+#' @param params numeric vector of parameters; assumed to be in order of
+#'   increasing waiting times (bins)
+#' @param skew numeric; length 1, a multiplier to be used on the final
+#'   parameter. A skew of 1 will keep the params identical to the input params
+#'
+#' @details The skew parameter is applied to the final item of the params
+#'   vector. The inverse of the skew parameter is applied to the second item of
+#'   the params vector. The adjustment made to the items in between item to and
+#'   item n are calculated by a linear extrapolation between the inverse skew
+#'   and the skew. The first item is held constant.
+#'
+#' @importFrom dplyr tibble
+#' @noRd
+#' @returns a revised numeric vector of parameters
+#'
+#' @examples
+#' apply_parameter_skew(
+#'   params = c(0.03, 0.02, 0.02, 0.01, 0.04, 0.05),
+#'   skew = 1.05
+#' )
+apply_parameter_skew <- function(params, skew) {
+
+  # check params is numeric
+  if (!is.numeric(params))
+    stop("params must be numeric")
+
+  # check skew is numeric
+  if (!is.numeric(skew))
+    stop("skew must be numeric")
+
+  # check skew is length 1
+  if (length(skew) != 1)
+    stop("skew must be length 1")
+
+  params_length <- length(params)
+
+  if (params_length <= 2) return(params)
+
+  lm_tbl <- dplyr::tibble(
+    x = c(2, params_length),
+    y = c(1 - (skew - 1), skew)
+  )
+
+  fit <- lm(y ~ x, data = lm_tbl)
+
+  multipliers <- predict(
+    object = fit,
+    newdata = tibble(x = 2:params_length)
+  )
+
+  params_out <- params * c(1, multipliers) |>
+    unname()
+
+  return(params_out)
+}
+
+
 # string functions --------------------------------------------------------
 #' convert the string version of months waited to the numeric id version
 #' @param months_waited string; vector with format, by example "2-3"
@@ -413,6 +485,22 @@ parse_number <- function(x) {
         x,
         gregexpr(
           "[-]{0,1}[[:digit:]]+\\.{0,1}[[:digit:]]*",
+          x
+        )
+      )
+    )
+  )
+  return(parsed_number)
+}
+
+
+parse_first_number <- function(x) {
+  parsed_number <- as.numeric(
+    unlist(
+      regmatches(
+        x,
+        regexpr(
+          "[[:digit:]]{2,3}\\s",
           x
         )
       )

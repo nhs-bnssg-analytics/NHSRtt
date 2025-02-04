@@ -95,7 +95,8 @@ test_that("optimise_capacity errors", {
       t_1_capacity = future_capacity,
       referrals_projections = future_referrals,
       incomplete_pathways = incompletes_t0,
-      renege_capacity_params = params |> rename(renege_params = renege_param),
+      renege_capacity_params = params |>
+        dplyr::rename(renege_params = renege_param),
       target_bin = max_months,
       target = "~-2%",
       tolerance = 0.005
@@ -123,7 +124,8 @@ test_that("optimise_capacity errors", {
     optimise_capacity(
       t_1_capacity = future_capacity,
       referrals_projections = future_referrals,
-      incomplete_pathways = incompletes_t0 |> rename(junk = "incompletes"),
+      incomplete_pathways = incompletes_t0 |>
+        dplyr::rename(junk = "incompletes"),
       renege_capacity_params = params,
       target_bin = max_months,
       target = "~-2%",
@@ -319,7 +321,7 @@ test_that("optimise_capacity functionality", {
       target = "~-2%",
       tolerance = 0.005
     ),
-    0.71875,
+    c(converged = 0.71875),
     info = "optimise_capacity consistently produces an answer"
   )
 })

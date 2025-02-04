@@ -68,7 +68,8 @@ test_that("calibrate_capacity_renege_params errors", {
 
   expect_error(
     calibrate_capacity_renege_params(
-      referrals = refs |> rename(referral = referrals),
+      referrals = refs |>
+        dplyr::rename(referral = referrals),
       incompletes = incomp,
       completes = comp,
       max_months_waited = max_months,
@@ -82,7 +83,8 @@ test_that("calibrate_capacity_renege_params errors", {
     calibrate_capacity_renege_params(
       referrals = refs,
       incompletes = incomp,
-      completes = comp |> rename(completes = treatments),
+      completes = comp |>
+        dplyr::rename(completes = treatments),
       max_months_waited = max_months,
       redistribute_m0_reneges = TRUE
     ),
@@ -93,7 +95,8 @@ test_that("calibrate_capacity_renege_params errors", {
   expect_error(
     calibrate_capacity_renege_params(
       referrals = refs,
-      incompletes = incomp |> rename(waiting_times = incompletes),
+      incompletes = incomp |>
+        dplyr::rename(waiting_times = incompletes),
       completes = comp,
       max_months_waited = max_months,
       redistribute_m0_reneges = TRUE
@@ -315,7 +318,8 @@ test_that("apply_params_to_projections errors", {
       capacity_projections = future_capacity,
       referrals_projections = future_referrals,
       incomplete_pathways = incompletes_t0,
-      renege_capacity_params = params |> rename(regene_param = renege_param),
+      renege_capacity_params = params |>
+        dplyr::rename(regene_param = renege_param),
       max_months_waited = max_months
     ),
     "renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param",
@@ -338,7 +342,8 @@ test_that("apply_params_to_projections errors", {
     apply_params_to_projections(
       capacity_projections = future_capacity,
       referrals_projections = future_referrals,
-      incomplete_pathways = incompletes_t0 |>  rename(incomplete = incompletes),
+      incomplete_pathways = incompletes_t0 |>
+        dplyr::rename(incomplete = incompletes),
       renege_capacity_params = params,
       max_months_waited = max_months
     ),
@@ -404,35 +409,50 @@ test_that("apply_params_to_projections functionality", {
   )
 
   expected <- dplyr::tibble(
-    period_id = c(1L,1L,1L,1L,
-                  1L,2L,2L,2L,2L,2L,3L,3L,3L,3L,3L,4L,
-                  4L,4L,4L,4L),
-    months_waited_id = c(1L,2L,3L,4L,
-                         0L,2L,3L,4L,1L,0L,3L,4L,2L,1L,0L,4L,
-                         3L,2L,1L,0L),
-    calculated_treatments = c(27.63423362,
-                              42.12923285,81.22443171,155.9708739,20.04122796,
-                              31.91646707,49.0484251,279.3180835,
-                              13.59862424,5.118400036,37.56314012,390.8925394,
-                              15.87698091,3.510835114,1.156504437,382.1254298,
-                              13.99962849,3.071035894,0.594326398,0.2095794),
-    reneges = c(-237.5428439,
-                -434.4623289,-839.2180671,-1615.793391,
-                154.3246808,-1370.490791,-2110.114129,-12048.53131,
-                -486.7234099,164.111124,-7086.420979,
-                -73939.51857,-2989.602255,-551.0384133,162.6055174,
-                -429331.8355,-15687.34635,-3434.775038,-554.0696711,
-                175.0267722),
-    incompletes = c(324.9086103,
-                    495.333096,954.9936354,1833.822517,235.6340912,
-                    1663.482934,2556.3988,14558.02938,708.7588769,
-                    266.7704759,8712.340773,90663.0542,
-                    3682.484151,814.2980541,268.2379782,528325.105,
-                    19355.83087,4246.002057,821.7133229,289.7636484),
-    input_treatments = c(327L,327L,
-                         327L,327L,327L,379L,379L,379L,379L,379L,449L,
-                         449L,449L,449L,449L,400L,400L,400L,400L,
-                         400L)
+    period_id = c(
+      1L,1L,1L,1L,1L,2L,2L,2L,
+      2L,2L,3L,3L,3L,3L,3L,4L,4L,
+      4L,4L,4L
+    ),
+    months_waited_id = c(
+      0L,1L,2L,3L,4L,0L,1L,2L,
+      3L,4L,0L,1L,2L,3L,4L,0L,1L,
+      2L,3L,4L
+    ),
+    calculated_treatments = c(
+      20.04122796,27.63423362,
+      42.12923285,81.22443171,155.9708739,
+      5.118400036,13.59862424,31.91646707,
+      49.0484251,279.3180835,1.156504437,
+      3.510835114,15.87698091,37.56314012,
+      390.8925394,0.2095794,0.594326398,
+      3.071035894,13.99962849,382.1254298
+    ),
+    reneges = c(
+      154.3246808,-237.5428439,
+      -434.4623289,-839.2180671,-1615.793391,
+      164.111124,-486.7234099,-1370.490791,
+      -2110.114129,-12048.53131,
+      162.6055174,-551.0384133,-2989.602255,
+      -7086.420979,-73939.51857,175.0267722,
+      -554.0696711,-3434.775038,-15687.34635,
+      -429331.8355
+    ),
+    incompletes = c(
+      235.6340912,324.9086103,
+      495.333096,954.9936354,1833.822517,
+      266.7704759,708.7588769,1663.482934,
+      2556.3988,14558.02938,268.2379782,
+      814.2980541,3682.484151,8712.340773,
+      90663.0542,289.7636484,821.7133229,
+      4246.002057,19355.83087,528325.105
+    ),
+    input_treatments = c(
+      327L,327L,327L,327L,327L,
+      379L,379L,379L,379L,379L,449L,
+      449L,449L,449L,449L,400L,400L,400L,
+      400L,400L
+    )
   )
 
   expect_equal(
