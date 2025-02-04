@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">NHSRtt</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -119,47 +119,47 @@ valdiation period.</p>
 <span><span class="va">analysis_trust</span> <span class="op">&lt;-</span> <span class="st">"RC9"</span> <span class="co"># filter for a single trust</span></span>
 <span><span class="va">max_months_waited</span> <span class="op">&lt;-</span> <span class="fl">12</span> <span class="co"># I am only interested in waiting time bins up to 12 months</span></span></code></pre></div>
 <p><img src="rtt-pipeline_files/figure-html/visualise-analysis-timings-1.png" width="672"></p>
-<p>The public data(<a href="https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/" class="external-link">source</a>)
+<p>The public data (<a href="https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/" class="external-link">source</a>)
 can be sourced with the <code><a href="../reference/get_rtt_data.html">get_rtt_data()</a></code> function. The data
 we are interested from the website are the pathways that are admitted
 and non-admitted (these are considered completed pathways), incomplete
 (these are people who are still waiting to be admitted), and new RTT
 periods (these are new referrals that are entering the referral to
-treatment pathway). To specify which dataset to download, the
-<code>type</code> argument is set to one of “complete”, “incomplete” or
-“referral”. The data are provided by specialty and trust, so can be
-aggregated depending on the analysis of interest.</p>
+treatment pathway). The data are provided by trust_parent_org_code,
+commissioner_parent_org_code, commissioner_org_code, trust and
+specialty, so can be aggregated depending on the analysis of
+interest.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># each metric must be downloaded separately</span></span>
-<span><span class="va">completes</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"complete"</span>,</span>
+<span><span class="va">monthly_rtt</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
 <span>  date_start <span class="op">=</span> <span class="va">calibration_start</span>,</span>
 <span>  date_end <span class="op">=</span> <span class="va">validation_end</span>,</span>
-<span>  show_progress <span class="op">=</span> <span class="cn">FALSE</span> <span class="co"># can change this to TRUE to see progress</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">incompletes</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"incomplete"</span>,</span>
-<span>  date_start <span class="op">=</span> <span class="va">calibration_start</span>,</span>
-<span>  date_end <span class="op">=</span> <span class="va">validation_end</span>,</span>
-<span>  show_progress <span class="op">=</span> <span class="cn">FALSE</span> <span class="co"># can change this to TRUE to see progress</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">referrals</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"referral"</span>,</span>
-<span>  date_start <span class="op">=</span> <span class="va">calibration_start</span>,</span>
-<span>  date_end <span class="op">=</span> <span class="va">validation_end</span>,</span>
+<span>  trust_codes <span class="op">=</span> <span class="va">analysis_trust</span>, <span class="co"># the trust we are interested in</span></span>
 <span>  show_progress <span class="op">=</span> <span class="cn">FALSE</span> <span class="co"># can change this to TRUE to see progress</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Here is what the first 15 rows of data for the completes object looks
-like when it comes out of the <code><a href="../reference/get_rtt_data.html">get_rtt_data()</a></code> function (this
-may change if this is run on a different date as the data update
-monthly):</p>
+<p>Here is what the first 15 rows of data for the monthly_rtt object
+looks like when it comes out of the <code><a href="../reference/get_rtt_data.html">get_rtt_data()</a></code> function
+(this may change if this is run on a different date as the data update
+monthly on the live website):</p>
 <table class="table">
 <caption>Example completes data set following the download from the NHS
 website.</caption>
+<colgroup>
+<col width="16%">
+<col width="21%">
+<col width="16%">
+<col width="4%">
+<col width="7%">
+<col width="8%">
+<col width="10%">
+<col width="8%">
+<col width="7%">
+</colgroup>
 <thead><tr class="header">
+<th align="left">trust_parent_org_code</th>
+<th align="left">commissioner_parent_org_code</th>
+<th align="left">commissioner_org_code</th>
 <th align="left">trust</th>
 <th align="left">specialty</th>
 <th align="left">period</th>
@@ -169,133 +169,179 @@ website.</caption>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">&lt;1</td>
-<td align="left">Admitted</td>
-<td align="right">32.285714</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="even">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">1-2</td>
-<td align="left">Admitted</td>
-<td align="right">33.428571</td>
+<td align="left">Incomplete</td>
+<td align="right">2.0000000</td>
 </tr>
 <tr class="odd">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">2-3</td>
-<td align="left">Admitted</td>
-<td align="right">18.571429</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="even">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">3-4</td>
-<td align="left">Admitted</td>
-<td align="right">15.714286</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="odd">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">4-5</td>
-<td align="left">Admitted</td>
-<td align="right">4.000000</td>
+<td align="left">Incomplete</td>
+<td align="right">1.0000000</td>
 </tr>
 <tr class="even">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">5-6</td>
-<td align="left">Admitted</td>
-<td align="right">8.285714</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="odd">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">6-7</td>
-<td align="left">Admitted</td>
-<td align="right">3.857143</td>
+<td align="left">Incomplete</td>
+<td align="right">0.5714286</td>
 </tr>
 <tr class="even">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">7-8</td>
-<td align="left">Admitted</td>
-<td align="right">10.857143</td>
+<td align="left">Incomplete</td>
+<td align="right">0.4285714</td>
 </tr>
 <tr class="odd">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">8-9</td>
-<td align="left">Admitted</td>
-<td align="right">4.285714</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="even">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">9-10</td>
-<td align="left">Admitted</td>
-<td align="right">5.285714</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="odd">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">10-11</td>
-<td align="left">Admitted</td>
-<td align="right">8.428571</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="even">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">11-12</td>
-<td align="left">Admitted</td>
-<td align="right">7.285714</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="odd">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">12-13</td>
-<td align="left">Admitted</td>
-<td align="right">5.714286</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="even">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">13-14</td>
-<td align="left">Admitted</td>
-<td align="right">3.000000</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 <tr class="odd">
-<td align="left">R1H</td>
+<td align="left">QHG</td>
+<td align="left">NA</td>
+<td align="left">13Q</td>
+<td align="left">RC9</td>
 <td align="left">C_100</td>
 <td align="left">2024-10-01</td>
 <td align="left">14-15</td>
-<td align="left">Admitted</td>
-<td align="right">5.428571</td>
+<td align="left">Incomplete</td>
+<td align="right">0.0000000</td>
 </tr>
 </tbody>
 </table>
 <p>For the purposes of this vignette, where we are performing the
-analysis on all activity (rather than by specialty), we append and
-aggregate the data before splitting it out again later into three
-datasets. The data manipulation here takes five steps:</p>
+analysis on all activity (rather than by specialty), we aggregate the
+data (because the selected trust will have multiple records assigned to
+the different commissioners, commissioner parent and trust parent)
+before splitting it out again later into three datasets. The data
+manipulation here takes five steps:</p>
 <ol style="list-style-type: decimal">
-<li>filter for the trust of interest</li>
 <li>change the “type” column into “Complete”, “Incomplete” and
 “Referrals”</li>
 <li>convert the months_waited string into an id using the
@@ -305,21 +351,8 @@ datasets. The data manipulation here takes five steps:</p>
 dataset</li>
 </ol>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">monthly_rtt</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span></span>
-<span>  <span class="va">completes</span>,</span>
-<span>  <span class="va">incompletes</span>,</span>
-<span>  <span class="va">referrals</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span></span>
-<span>    <span class="va">trust</span> <span class="op">==</span> <span class="va">analysis_trust</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span> </span>
+<code class="sourceCode R"><span><span class="va">monthly_rtt</span> <span class="op">&lt;-</span> <span class="va">monthly_rtt</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    type <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/case_when.html" class="external-link">case_when</a></span><span class="op">(</span></span>
-<span>      <span class="va">type</span> <span class="op">==</span> <span class="st">"Non-Admitted"</span> <span class="op">~</span> <span class="st">"Complete"</span>,</span>
-<span>      <span class="va">type</span> <span class="op">==</span> <span class="st">"Admitted"</span> <span class="op">~</span> <span class="st">"Complete"</span>,</span>
-<span>      <span class="va">type</span> <span class="op">==</span> <span class="st">"New Periods"</span> <span class="op">~</span> <span class="st">"Referrals"</span>,</span>
-<span>      .default <span class="op">=</span> <span class="va">type</span></span>
-<span>    <span class="op">)</span>,</span>
 <span>    months_waited_id <span class="op">=</span> <span class="fu"><a href="../reference/convert_months_waited_to_id.html">convert_months_waited_to_id</a></span><span class="op">(</span></span>
 <span>      <span class="va">months_waited</span>,</span>
 <span>      <span class="va">max_months_waited</span></span>
@@ -1358,40 +1391,12 @@ years in total.</p>
 <span></span>
 <span></span>
 <span><span class="co"># each metric must be downloaded separately</span></span>
-<span><span class="va">additional_completes</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"complete"</span>,</span>
+<span><span class="va">additional_monthly_rtt</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
 <span>  date_start <span class="op">=</span> <span class="va">additional_start</span>,</span>
-<span>  date_end <span class="op">=</span> <span class="va">additional_end</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">additional_incompletes</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"incomplete"</span>,</span>
-<span>  date_start <span class="op">=</span> <span class="va">additional_start</span>,</span>
-<span>  date_end <span class="op">=</span> <span class="va">additional_end</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">additional_referrals</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
-<span>  type <span class="op">=</span> <span class="st">"referral"</span>,</span>
-<span>  date_start <span class="op">=</span> <span class="va">additional_start</span>,</span>
-<span>  date_end <span class="op">=</span> <span class="va">additional_end</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># append and manipulation</span></span>
-<span><span class="va">additional_monthly_rtt</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span></span>
-<span>  <span class="va">additional_completes</span>,</span>
-<span>  <span class="va">additional_incompletes</span>,</span>
-<span>  <span class="va">additional_referrals</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span></span>
-<span>    <span class="va">trust</span> <span class="op">==</span> <span class="va">analysis_trust</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>  date_end <span class="op">=</span> <span class="va">additional_end</span>,</span>
+<span>  trust_codes <span class="op">=</span> <span class="va">analysis_trust</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    type <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/case_when.html" class="external-link">case_when</a></span><span class="op">(</span></span>
-<span>      <span class="va">type</span> <span class="op">==</span> <span class="st">"Non-Admitted"</span> <span class="op">~</span> <span class="st">"Complete"</span>,</span>
-<span>      <span class="va">type</span> <span class="op">==</span> <span class="st">"Admitted"</span> <span class="op">~</span> <span class="st">"Complete"</span>,</span>
-<span>      <span class="va">type</span> <span class="op">==</span> <span class="st">"New Periods"</span> <span class="op">~</span> <span class="st">"Referrals"</span>,</span>
-<span>      .default <span class="op">=</span> <span class="va">type</span></span>
-<span>    <span class="op">)</span>,</span>
 <span>    months_waited_id <span class="op">=</span> <span class="fu"><a href="../reference/convert_months_waited_to_id.html">convert_months_waited_to_id</a></span><span class="op">(</span></span>
 <span>      <span class="va">months_waited</span>,</span>
 <span>      <span class="va">max_months_waited</span></span>
