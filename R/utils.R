@@ -371,6 +371,66 @@ weibull_sample <- function(x) {
 }
 
 
+#' Pivot the parameters passed into the function so relationships between the
+#' parameters remain consistent but giving control to providing more or less
+#' focus on extreme bins
+#'
+#' @param params numeric vector of parameters; assumed to be in order of
+#'   increasing waiting times (bins)
+#' @param skew numeric; length 1, a multiplier to be used on the final
+#'   parameter. A skew of 1 will keep the params identical to the input params
+#'
+#' @details The skew parameter is applied to the final item of the params
+#'   vector. The inverse of the skew parameter is applied to the second item of
+#'   the params vector. The adjustment made to the items in between item to and
+#'   item n are calculated by a linear extrapolation between the inverse skew
+#'   and the skew. The first item is held constant.
+#'
+#' @importFrom dplyr tibble
+#' @noRd
+#' @returns a revised numeric vector of parameters
+#'
+#' @examples
+#' apply_parameter_skew(
+#'   params = c(0.03, 0.02, 0.02, 0.01, 0.04, 0.05),
+#'   skew = 1.05
+#' )
+apply_parameter_skew <- function(params, skew) {
+
+  # check params is numeric
+  if (!is.numeric(params))
+    stop("params must be numeric")
+
+  # check skew is numeric
+  if (!is.numeric(skew))
+    stop("skew must be numeric")
+
+  # check skew is length 1
+  if (length(skew) != 1)
+    stop("skew must be length 1")
+
+  params_length <- length(params)
+
+  if (params_length <= 2) return(params)
+
+  lm_tbl <- dplyr::tibble(
+    x = c(2, params_length),
+    y = c(1 - (skew - 1), skew)
+  )
+
+  fit <- lm(y ~ x, data = lm_tbl)
+
+  multipliers <- predict(
+    object = fit,
+    newdata = tibble(x = 2:params_length)
+  )
+
+  params_out <- params * c(1, multipliers)
+
+  return(params_out)
+}
+
+
 # string functions --------------------------------------------------------
 #' convert the string version of months waited to the numeric id version
 #' @param months_waited string; vector with format, by example "2-3"

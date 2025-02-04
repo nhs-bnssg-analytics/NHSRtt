@@ -84,3 +84,63 @@ test_that("redistribute_incompletes_optimally works", {
   )
 
 })
+
+
+test_that("apply_parameter_skew works", {
+  params_before <- c(0.05, 0.02, 0.02, 0.06, 0.08, 0.1)
+  skew_factor <- 1.1
+  params_after <- apply_parameter_skew(
+    params = params_before,
+    skew = skew_factor
+  )
+
+  expect_equal(
+    length(params_after),
+    length(params_before),
+    info = "length of output identical to length of input"
+  )
+
+  expect_equal(
+    params_after[1],
+    params_before[1],
+    info = "first parameter remains unchanged"
+  )
+
+  expect_equal(
+    tail(params_after, 1),
+    tail(params_before) * skew_factor,
+    info = "final value is equal to the final value of the input multiplied by the skew factor"
+  )
+
+})
+
+test_that("apply_parameter_skew errors", {
+
+  expect_error(
+    apply_parameter_skew(
+      params = c("0.05", "0.02", "0.02", "0.06", "0.08", "0.1"),
+      skew = 1.1
+    ),
+    "params must be numeric",
+    info = "numeric input for params"
+  )
+
+  expect_error(
+    apply_parameter_skew(
+      params = c(0.05, 0.02, 0.02, 0.06, 0.08, 0.1),
+      skew = "1.1"
+    ),
+    "skew must be numeric",
+    info = "numeric input for skew"
+  )
+
+  expect_error(
+    apply_parameter_skew(
+      params = c(0.05, 0.02, 0.02, 0.06, 0.08, 0.1),
+      skew = rep(1.1, 2)
+    ),
+    "skew must be length 1",
+    info = "skew must be length 1"
+  )
+
+})
