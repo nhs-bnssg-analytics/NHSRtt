@@ -1,5 +1,8 @@
 
-# NHSRtt 0.1.5.9000
+# NHSRtt 0.2.0
+
+* data import now includes commissioner information
+* `get_rtt_data()` stops using `type` as an input argument and all the data are returned in one call
 
 # NHSRtt 0.1.5
 

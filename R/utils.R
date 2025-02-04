@@ -31,50 +31,61 @@ obtain_links <- function(url) {
   return(links)
 }
 
-
-#' Subset string from the right
+#' Subset mmmyy from a string
 #'
 #' @param x the string
-#' @param n integer; number of letters to subset from on the right
 #'
-#' @return subsetted string
-#'
-substr_right <- function(x, n){
-  substr(x, nchar(x) - n + 1, nchar(x))
+#' @return subsetted string in the format "mmmyy"
+#' @noRd
+extract_monyr <- function(x) {
+  start_character <- regexpr(
+    pattern = "[[:alpha:]]{3}[[:digit:]]{2}",
+    text = x
+  ) |>
+    as.numeric()
+
+  monyr <- substr(
+    x, start_character, start_character + 4
+  )
+
+  return(monyr)
 }
 
 
-#' Download a file from a url to a temporary file
-#'
-#' @param excel_url sting; url of the file. Must have an xlsx or xls extension
-#' @param filename string; name of file
-#' @importFrom tools file_ext
-#' @importFrom utils download.file
-#' @return filepath to where the temporary file is stored
-download_temp_file <- function(excel_url, filename) {
+#' @param zip_url string; url of zip file for downloading and unzipping
+#' @importFrom dplyr pull
+#' @importFrom utils download.file unzip
+#' @importFrom rlang .data
+#' @return file path location of the csv file stored in the zip file
+#' @noRd
+download_unzip_files <- function(zip_url) {
+  # if (!isTRUE(file.info(directory)$isdir))
+  #   dir.create(directory, recursive = TRUE)
   temporary_directory <- tempdir()
-  temp_file <- paste0(
-    temporary_directory,
-    "/",
-    filename,
-    ".",
-    tools::file_ext(excel_url)
-  )
-  # tmp_file <- tempfile(
-  #   pattern = names(excel_url),
-  #   fileext = tools::file_ext(excel_url)
-  # )
+  temp <- tempfile()
 
   download.file(
-    url = excel_url,
-    destfile = temp_file,
-    quiet = TRUE,
-    mode = "wb"
+    zip_url,
+    temp,
+    quiet = TRUE
   )
 
-  return(temp_file)
-}
+  zipped_files <- unzip(
+    zipfile = temp,
+    list = TRUE
+  ) |>
+    dplyr::pull(.data$Name)
 
+  extracted_files <- unzip(
+    zipfile = temp,
+    files = zipped_files,
+    exdir = temporary_directory
+  )
+
+  unlink(temp)
+
+  return(extracted_files)
+}
 
 # data processing ---------------------------------------------------------
 
@@ -425,7 +436,8 @@ apply_parameter_skew <- function(params, skew) {
     newdata = tibble(x = 2:params_length)
   )
 
-  params_out <- params * c(1, multipliers)
+  params_out <- params * c(1, multipliers) |>
+    unname()
 
   return(params_out)
 }
@@ -473,6 +485,22 @@ parse_number <- function(x) {
         x,
         gregexpr(
           "[-]{0,1}[[:digit:]]+\\.{0,1}[[:digit:]]*",
+          x
+        )
+      )
+    )
+  )
+  return(parsed_number)
+}
+
+
+parse_first_number <- function(x) {
+  parsed_number <- as.numeric(
+    unlist(
+      regmatches(
+        x,
+        regexpr(
+          "[[:digit:]]{2,3}\\s",
           x
         )
       )

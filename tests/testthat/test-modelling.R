@@ -68,7 +68,8 @@ test_that("calibrate_capacity_renege_params errors", {
 
   expect_error(
     calibrate_capacity_renege_params(
-      referrals = refs |> rename(referral = referrals),
+      referrals = refs |>
+        dplyr::rename(referral = referrals),
       incompletes = incomp,
       completes = comp,
       max_months_waited = max_months,
@@ -82,7 +83,8 @@ test_that("calibrate_capacity_renege_params errors", {
     calibrate_capacity_renege_params(
       referrals = refs,
       incompletes = incomp,
-      completes = comp |> rename(completes = treatments),
+      completes = comp |>
+        dplyr::rename(completes = treatments),
       max_months_waited = max_months,
       redistribute_m0_reneges = TRUE
     ),
@@ -93,7 +95,8 @@ test_that("calibrate_capacity_renege_params errors", {
   expect_error(
     calibrate_capacity_renege_params(
       referrals = refs,
-      incompletes = incomp |> rename(waiting_times = incompletes),
+      incompletes = incomp |>
+        dplyr::rename(waiting_times = incompletes),
       completes = comp,
       max_months_waited = max_months,
       redistribute_m0_reneges = TRUE
@@ -315,7 +318,8 @@ test_that("apply_params_to_projections errors", {
       capacity_projections = future_capacity,
       referrals_projections = future_referrals,
       incomplete_pathways = incompletes_t0,
-      renege_capacity_params = params |> rename(regene_param = renege_param),
+      renege_capacity_params = params |>
+        dplyr::rename(regene_param = renege_param),
       max_months_waited = max_months
     ),
     "renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param",
@@ -338,7 +342,8 @@ test_that("apply_params_to_projections errors", {
     apply_params_to_projections(
       capacity_projections = future_capacity,
       referrals_projections = future_referrals,
-      incomplete_pathways = incompletes_t0 |>  rename(incomplete = incompletes),
+      incomplete_pathways = incompletes_t0 |>
+        dplyr::rename(incomplete = incompletes),
       renege_capacity_params = params,
       max_months_waited = max_months
     ),

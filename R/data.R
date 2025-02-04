@@ -2,16 +2,17 @@
 #' Download and tidy the referral to treatment data from the NHS Statistics
 #' webpage
 #'
-#' @param type string; one of "complete", "incomplete" or "referral"
 #' @param url string; url of the NHS Referral to Treatment (RTT) Waiting Times
 #' @param date_start date; start date (earliest date is 1st April 2016, but the
 #'   default is 1st April 2019)
 #' @param date_end date; end date (defaults to "today")
 #' @param show_progress logical; show progress of downloading and processing
 #'   files. Defaults to false
+#' @inheritParams tidy_file
 #'
-#' @return a tibble with fields for trust, specialty, period, type,
-#'   months_waited and value
+#' @return a tibble with fields for trust_parent_org_code,
+#'   commissioner_parent_org_code, commissioner_org_code, trust, specialty,
+#'   period, type, months_waited and value
 #' @importFrom purrr map
 #' @export
 #'
@@ -25,8 +26,13 @@
 #' )
 #' }
 #'
-get_rtt_data <- function(type, url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
-                         date_start = as.Date("2019-04-01"), date_end = Sys.Date(), show_progress = FALSE) {
+get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
+                         date_start = as.Date("2019-04-01"), date_end = Sys.Date(),
+                         trust_parent_codes = NULL,
+                         commissioner_parent_codes = NULL,
+                         commissioner_org_codes = NULL, trust_codes = NULL,
+                         specialty_codes = NULL,
+                         show_progress = FALSE) {
 
   # check date inputs
   if (!inherits(date_start, "Date")) stop("date_start needs to be a date format")
@@ -40,12 +46,6 @@ get_rtt_data <- function(type, url = "https://www.england.nhs.uk/statistics/stat
   } else if (is.na(show_progress)) {
     stop("show_progress must be TRUE or FALSE")
   }
-
-  # check inputs for type
-  type <- match.arg(
-    type,
-    c("complete", "incomplete", "referral")
-  )
 
   # calculate start year for financial year for date_start
   month_start <- as.numeric(format(date_start, "%m"))
@@ -79,65 +79,41 @@ get_rtt_data <- function(type, url = "https://www.england.nhs.uk/statistics/stat
     (\(x) x[as.numeric(substr(names(x), 1, 4)) >= year_start])() |>
     (\(x) x[as.numeric(substr(names(x), 6, 7)) <= year_end])()
 
-  xl_files <- purrr::map(
+  zip_files <- purrr::map(
     annual_urls,
     obtain_links
   ) |>
     unlist() |>
-    (function(x) x[grepl("xls$|xlsx$", x)])() |>
-    (function(x) x[grepl("Provider", x)])()
-
-  # standardise the names of the links
-  names(xl_files) <- gsub("NonAdmitted|Non Admitted|Non-admitted", "Non-Admitted", names(xl_files))
-  names(xl_files) <- gsub(".*RTT waiting times data\\.", "", names(xl_files))
-  names(xl_files) <- gsub("([[:alpha:]]{3}[0-9]{2}).*", "\\1", names(xl_files))
-
-  # include additional filter for type
-  if (type == "complete") {
-    type_filter <- "Admitted"
-  } else if (type == "incomplete") {
-    type_filter <- "Incomplete"
-  } else if (type == "referral") {
-    type_filter <- "New Periods"
-  }
-
-  xl_files <- xl_files[grepl(type_filter, names(xl_files))]
+    (function(x) x[grepl("zip$", x)])() |>
+    # remove the latest version which is duplicated
+    (\(x) x[!duplicated(x)])()
 
   # filter for dates
-  dts <- as.Date(paste0("01", substr_right(names(xl_files), 5)), "%d%b%y")
-  xl_files <- xl_files[dplyr::between(dts, date_start, date_end)]
+  dts <- as.Date(paste0("01", extract_monyr(names(zip_files))), "%d%b%y")
+  zip_files <- zip_files[dplyr::between(dts, date_start, date_end)]
 
   # update on progress
   if (show_progress == TRUE) cat("Downloading data...\n")
 
   # download the files into a temporary location
-  xl_files <- xl_files |>
+  csv_files <- zip_files |>
     purrr::imap_chr(
-      download_temp_file,
+      ~ download_unzip_files(.x),
       .progress = show_progress
     )
-
-  # update on progress
-  if (show_progress == TRUE) cat("Understanding sheet structures...\n")
-
-  # calculate the number of rows to skip at the start of each sheet when reading
-  # the files in
-  skip_rows <- purrr::map_dbl(
-    xl_files,
-    identify_n_skip_rows,
-    .progress = show_progress
-  )
 
   # update on progress
   if (show_progress == TRUE) cat("Reading and tidying data...\n")
 
   # read in and tidy the files
-  df <- purrr::map2(
-    .x = xl_files,
-    .y = skip_rows,
+  df <- purrr::map(
+    .x = csv_files,
     .f = ~ tidy_file(
-      excel_filepath = .x,
-      n_skip = .y
+      csv_filepath = .x,
+      trust_parent_codes = trust_parent_codes,
+      commissioner_parent_codes = commissioner_parent_codes,
+      commissioner_org_codes = commissioner_org_codes,
+      trust_codes = trust_codes
     ),
     .progress = show_progress
   ) |>
@@ -146,98 +122,171 @@ get_rtt_data <- function(type, url = "https://www.england.nhs.uk/statistics/stat
   return(df)
 }
 
-
-#' Find the first row of the table to import
+#' Read in and tidy the csv file
 #'
-#' @param filepath file path for the excel file
-#' @param sheet string; sheet name
-#' @importFrom dplyr pull
-#' @importFrom readxl read_excel
-#' @return integer representing the number of rows to skip in the sheet until
-#'   the header column of interest
-identify_n_skip_rows <- function(filepath, sheet = "Provider") {
-  skip_rows <- readxl::read_excel(
-    path = filepath,
-    sheet = sheet,
-    range = "B1:B20",
-    col_names = "test"
-  ) |>
-    pull(1) |>
-    (\(x) grep("Region Code", x) - 1)()
-
-  return(skip_rows)
-}
-
-
-#' Make the excel file a tidy format
-#'
-#' @inheritParams identify_n_skip_rows
-#' @param n_skip number of rows to skip before reading in main table from sheet
-#' @param excel_filepath string; file path to the file location
-#' @importFrom readxl read_excel
-#' @importFrom dplyr select mutate rename case_when summarise left_join join_by starts_with ends_with any_of
+#' @param csv_filepath string; file path to the file location
+#' @param trust_parent_codes character; vector of trust parent codes to filter
+#'   for (optional); eg "QE1" is NHS Lancashire and South Cumbria Integrated
+#'   Care Board
+#' @param commissioner_parent_codes character; vector of commissioner parent
+#'   codes to filter for (optional); eg "QF7" is NHS South Yorkshire Integrated
+#'   Care Board
+#' @param commissioner_org_codes character; vector of commissioner org codes to
+#'   filter for (optional); eg "15C" is the NHS Bristol, North Somerset and
+#'   South Gloucestershire (sub-ICB location)
+#' @param trust_codes character; vector of trust codes to filter for (optional);
+#'   eg "R1A" is  Herefordshire and Worcestershire Health and Care NHS Trust
+#' @param specialty_codes character; vector of specialty codes to filter for (optional);
+#'   eg "C_999" is "Total" specialties
+#' @importFrom data.table fread fcase
+#' @importFrom dtplyr lazy_dt
+#' @importFrom dplyr select mutate summarise left_join join_by starts_with
+#'   distinct as_tibble filter union
 #' @importFrom tidyr pivot_longer
 #' @importFrom lubridate ceiling_date month year
 #' @importFrom rlang .data
 #' @return a tidy tibble
-tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
+tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
+                      commissioner_parent_codes = NULL,
+                      commissioner_org_codes = NULL,
+                      trust_codes = NULL, specialty_codes = NULL) {
 
-  mnth <- substring(
-    basename(excel_filepath),
-    first = regexpr("[[[:alpha:]]{3}[0-9]{2}", basename(excel_filepath)),
-    last = regexpr("[[[:alpha:]]{3}[0-9]{2}", basename(excel_filepath)) + 4
-  )
-  mnth <- as.Date(paste0("01", mnth), "%d%b%y")
-
-  rtt <- readxl::read_excel(
-    path = excel_filepath,
-    .name_repair = "minimal",
-    sheet = sheet,
-    skip = n_skip
+  rtt <- data.table::fread(
+    input = csv_filepath,
+    na.strings = ""
   ) |>
+    lazy_dt() |>
     dplyr::select(
-      trust = "Provider Code",
+      period = "Period",
+      trust_parent_org_code = "Provider Parent Org Code",
+      commissioner_parent_org_code = "Commissioner Parent Org Code",
+      commissioner_org_code = "Commissioner Org Code",
+      trust = "Provider Org Code",
       specialty = "Treatment Function Code",
-      starts_with(">"),
-      ends_with("plus"),
-      any_of("Number of new RTT clock starts during the month")
+      type = "RTT Part Description",
+      starts_with("Gt"), # only includes pathways with known clock starts
+      total_all = "Total All"
+    ) |>
+    filter(
+      .data$type %in% c(
+        "Completed Pathways For Admitted Patients",
+        "Completed Pathways For Non-Admitted Patients",
+        "Incomplete Pathways",
+        "New RTT Periods - All Patients"
+      ),
+      .data$commissioner_org_code != "NONC"
     ) |>
     dplyr::mutate(
-      type = gsub(" Provider.*$", "", basename(excel_filepath)),
-      period = mnth
+      period = as.Date(gsub("RTT", "01", .data$period), format = "%d-%B-%Y"),
+      type = data.table::fcase(
+        .data$type == "Incomplete Pathways", "Incomplete",
+        .data$type == "New RTT Periods - All Patients", "Referrals",
+        .data$type %in% c("Completed Pathways For Admitted Patients",
+                    "Completed Pathways For Non-Admitted Patients"), "Complete"
+      )
     )
 
-  if (grepl("New Periods", excel_filepath)) {
+  if (!is.null(trust_parent_codes)) {
     rtt <- rtt |>
-      dplyr::rename(
-        value = "Number of new RTT clock starts during the month"
+      dplyr::filter(
+        .data$trust_parent_org_code %in% trust_parent_codes
       )
   }
 
-  if (grepl("Non-Admitted|Admitted|Incomplete", excel_filepath)) {
+  if (!is.null(commissioner_parent_codes)) {
     rtt <- rtt |>
-      tidyr::pivot_longer(
-        cols = !c("trust", "specialty", "type", "period"),
-        names_to = "weeks_waited",
-        values_to = "value",
-        values_transform = as.numeric
-      ) |>
-      dplyr::mutate(
-        # extract the first number from the weeks waited string
-        fewest_weeks_waited = as.numeric(
-          sub("\\D*(\\d+).*", "\\1", .data$weeks_waited)
-        ),
-        # calculate the end date of the week relative to the end of the month for
-        # the reporting period
-        week_end = (lubridate::ceiling_date(
-          x = .data$period,
-          unit = "months"
-        ) - 1) - (7 * .data$fewest_weeks_waited)
+      dplyr::filter(
+        .data$commissioner_parent_org_code %in% commissioner_parent_codes
       )
+  }
 
-    monthly_proportions <- month_attribution_lkp(
-      rtt[["week_end"]]
+  if (!is.null(commissioner_org_codes)) {
+    rtt <- rtt |>
+      dplyr::filter(
+        .data$commissioner_org_code %in% commissioner_org_codes
+      )
+  }
+
+  if (!is.null(trust_codes)) {
+    rtt <- rtt |>
+      dplyr::filter(
+        .data$trust %in% trust_codes
+      )
+  }
+
+  if (!is.null(specialty_codes)) {
+    rtt <- rtt |>
+      dplyr::filter(
+        .data$specialty %in% specialty_codes
+      )
+  }
+
+  mnth <- unique(dplyr::as_tibble(rtt)[["period"]])
+
+  referrals <- rtt |>
+    filter(
+      .data$type == "Referrals"
     ) |>
+    mutate(months_waited = "<1") |>
+    select(
+      "trust_parent_org_code",
+      "commissioner_parent_org_code",
+      "commissioner_org_code",
+      "trust",
+      "specialty",
+      "period",
+      "months_waited",
+      "type",
+      value = "total_all"
+    )
+
+  compl_incompl <- rtt |>
+    filter(
+      .data$type != "Referrals"
+    ) |>
+    # aggregate the non-admitted and admitted pathways
+    dplyr::summarise(
+      across(
+        starts_with("Gt"),
+        sum
+      ),
+      .by = c(
+        "period",
+        "trust_parent_org_code",
+        "commissioner_parent_org_code",
+        "commissioner_org_code",
+        "trust",
+        "specialty",
+        "type"
+      )
+    ) |>
+    tidyr::pivot_longer(
+      cols = !c("trust_parent_org_code",
+                "commissioner_parent_org_code",
+                "commissioner_org_code",
+                "trust",
+                "specialty",
+                "type",
+                "period"),
+      names_to = "weeks_waited",
+      values_to = "value"
+    ) |>
+    dplyr::mutate(
+      # extract the first number from the weeks waited string
+      fewest_weeks_waited = parse_first_number(.data$weeks_waited),
+      # calculate the end date of the week relative to the end of the month for
+      # the reporting period
+      week_end = (lubridate::ceiling_date(
+        x = mnth,
+        unit = "months"
+      ) - 1) - (7 * .data$fewest_weeks_waited)
+    ) |>
+    dplyr::as_tibble()
+
+    monthly_proportions <- compl_incompl |>
+      dplyr::distinct(.data$week_end) |>
+      dplyr::pull(.data$week_end) |>
+      month_attribution_lkp() |>
       dplyr::mutate(
         months_waited = (lubridate::month(mnth) -
                            lubridate::month(.data$wait_start_month)) +
@@ -254,28 +303,36 @@ tidy_file <- function(excel_filepath, sheet = "Provider", n_skip) {
         )
       )
 
-    rtt <- rtt |>
+    rtt <- compl_incompl |>
+      dtplyr::lazy_dt() |>
       dplyr::left_join(
         monthly_proportions,
-        by = dplyr::join_by(
-          week_end
-        ),
-        relationship = "many-to-many"
+        by = "week_end"
       ) |>
       dplyr::summarise(
-        value = sum(.data$value * .data$month_weight),
+        value = sum(.data$value * .data$month_weight, na.rm = TRUE),
         .by = c(
+          "trust_parent_org_code",
+          "commissioner_parent_org_code",
+          "commissioner_org_code",
           "trust",
           "specialty",
           "period",
           "months_waited",
           "type"
         )
-      )
-  }
+      ) |>
+      mutate(
+        period = as.Date(.data$period)
+      ) |>
+      dplyr::union(
+        referrals
+      ) |>
+      dplyr::as_tibble()
 
-  if (basename(dirname(excel_filepath)) != "sheets")
-    unlink(excel_filepath)
+
+  if (basename(dirname(csv_filepath)) != "sheets")
+    unlink(csv_filepath)
 
   return(rtt)
 }

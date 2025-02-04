@@ -1,7 +1,6 @@
 test_that("get_rtt_data error checks", {
   expect_error(
     get_rtt_data(
-      type = "complete",
       date_start = "2024-10-01",
       date_end = as.Date("2024-11-01"),
       show_progress = TRUE
@@ -12,7 +11,6 @@ test_that("get_rtt_data error checks", {
 
   expect_error(
     get_rtt_data(
-      type = "complete",
       date_start = as.Date("2024-10-01"),
       date_end = "2024-11-01",
       show_progress = TRUE
@@ -23,7 +21,6 @@ test_that("get_rtt_data error checks", {
 
   expect_error(
     get_rtt_data(
-      type = "complete",
       date_start = as.Date("2024-10-01"),
       date_end = as.Date("2024-11-01"),
       show_progress = c(TRUE, TRUE)
@@ -34,7 +31,6 @@ test_that("get_rtt_data error checks", {
 
   expect_error(
     get_rtt_data(
-      type = "complete",
       date_start = as.Date("2024-10-01"),
       date_end = as.Date("2024-11-01"),
       show_progress = "test"
@@ -45,7 +41,6 @@ test_that("get_rtt_data error checks", {
 
   expect_error(
     get_rtt_data(
-      type = "complete",
       date_start = as.Date("2024-10-01"),
       date_end = as.Date("2024-11-01"),
       show_progress = NA
@@ -54,19 +49,8 @@ test_that("get_rtt_data error checks", {
     info = "show_progress is not NA"
   )
 
-  expect_snapshot(
-    get_rtt_data(
-      type = "completes",
-      date_start = as.Date("2024-10-01"),
-      date_end = as.Date("2024-11-01"),
-      show_progress = FALSE
-    ),
-    error = TRUE
-  )
-
   expect_error(
     get_rtt_data(
-      type = "complete",
       date_start = as.Date("2013-10-01"),
       date_end = as.Date("2024-11-01"),
       show_progress = FALSE
@@ -78,130 +62,78 @@ test_that("get_rtt_data error checks", {
 })
 
 
-
 test_that("get_rtt_data functionality", {
-  completes <- get_rtt_data(
-    type = "complete",
+  df <- get_rtt_data(
     date_start = as.Date("2023-01-01"),
     date_end = as.Date("2023-01-31"),
+    trust_codes = "RTE",
     show_progress = FALSE
   )
 
-  incompletes <- get_rtt_data(
-    type = "incomplete",
-    date_start = as.Date("2023-01-01"),
-    date_end = as.Date("2023-01-31"),
-    show_progress = FALSE
-  )
-
-  referrals <- get_rtt_data(
-    type = "referral",
-    date_start = as.Date("2023-05-01"),
-    date_end = as.Date("2023-05-31"),
-    show_progress = FALSE
-  )
-
-  expected_names_comps_incomps <- c(
+  expected_names <- c(
+    "trust_parent_org_code",
+    "commissioner_parent_org_code",
+    "commissioner_org_code",
     "trust", "specialty", "period", "months_waited", "type", "value"
-  )
-
-  expected_names_referrals <- c(
-    "trust", "specialty", "value", "type", "period"
   )
 
   # completes
   expect_identical(
-    names(completes),
-    expected_names_comps_incomps,
-    info = "names of completes are expected"
+    names(df),
+    expected_names,
+    info = "names of get_rtt_data are expected"
   )
 
   expect_gt(
-    nrow(completes),
+    nrow(df),
     0
   )
 
   expect_false(
-    any(is.na(completes)),
+    any(is.na(df |> dplyr::select(!c("commissioner_parent_org_code")))),
     info = "there are NAs within the completes data"
   )
 
-  expect_identical(
-    names(incompletes),
-    expected_names_comps_incomps,
-    info = "names of incompletes are expected"
-  )
-
-  expect_gt(
-    nrow(incompletes),
-    0
-  )
-
-  expect_false(
-    any(is.na(incompletes)),
-    info = "there are NAs within the incompletes data"
-  )
-
-  expect_identical(
-    names(referrals),
-    expected_names_referrals,
-    info = "names of referrals are expected"
-  )
-
-  expect_gt(
-    nrow(referrals),
-    0
-  )
-
-  expect_false(
-    any(is.na(referrals)),
-    info = "there are NAs within the referrals data"
-  )
-
-
-})
-
-test_that("identify_n_skip_rows functionality", {
-
-  rows <- identify_n_skip_rows(
-    filepath = test_sheet("New-Periods-Provider-Apr23.xls"),
-    sheet = "Provider"
-  )
 
   expect_equal(
-    rows,
-    13,
-    info = "correct number of rows to skip"
+    df |>
+      dplyr::filter(type == "Referrals") |>
+      dplyr::pull(.data$months_waited) |>
+      unique() |>
+      as.character(),
+    "<1",
+    info = "all referrals have months waited '<1'"
   )
+
+
 })
 
 test_that("tidy_file functionality", {
 
-  tidied_referrals <- tidy_file(
-    excel_filepath = test_sheet("New-Periods-Provider-Apr23.xls"),
-    sheet = "Provider",
-    n_skip = 13
+  tidied_rbd <- tidy_file(
+    csv_filepath = test_sheet("20241130-RTT-November-2024-RBD.csv")
   )
 
   expected_names <- c(
-    "trust", "specialty",
-    "Number of new RTT clock starts during the month",
-    "type", "period"
+    "trust_parent_org_code",
+    "commissioner_parent_org_code",
+    "commissioner_org_code",
+    "trust", "specialty", "period", "months_waited", "type", "value"
   )
 
   expect_equal(
-    names(tidied_referrals),
+    names(tidied_rbd),
     expected_names,
     info = "names are as expected"
   )
 
   expect_gt(
-    nrow(tidied_referrals),
+    nrow(tidied_rbd),
     0
   )
 
   expect_false(
-    any(is.na(tidied_referrals)),
+    any(is.na(tidied_rbd |> dplyr::select(!c("commissioner_parent_org_code")))),
     info = "there are NAs within the tidied referrals data"
   )
 })

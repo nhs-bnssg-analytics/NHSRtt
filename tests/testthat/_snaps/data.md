@@ -1,12 +1,3 @@
-# get_rtt_data error checks
-
-    Code
-      get_rtt_data(type = "completes", date_start = as.Date("2024-10-01"), date_end = as.Date(
-        "2024-11-01"), show_progress = FALSE)
-    Condition
-      Error in `match.arg()`:
-      ! 'arg' should be one of "complete", "incomplete", "referral"
-
 # create_dummy_data functionality
 
     Code
