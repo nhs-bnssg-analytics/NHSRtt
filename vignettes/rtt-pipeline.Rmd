@@ -115,69 +115,43 @@ dplyr::tibble(
 
 ```
 
-The public data([source](https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/)) can be sourced with the `get_rtt_data()` function. The data we are interested from the website are the pathways that are admitted and non-admitted (these are considered completed pathways), incomplete (these are people who are still waiting to be admitted), and new RTT periods (these are new referrals that are entering the referral to treatment pathway). To specify which dataset to download, the `type` argument is set to one of "complete", "incomplete" or "referral". The data are provided by specialty and trust, so can be aggregated depending on the analysis of interest.
+The public data ([source](https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/)) can be sourced with the `get_rtt_data()` function. The data we are interested from the website are the pathways that are admitted and non-admitted (these are considered completed pathways), incomplete (these are people who are still waiting to be admitted), and new RTT periods (these are new referrals that are entering the referral to treatment pathway). The data are provided by trust_parent_org_code, commissioner_parent_org_code, commissioner_org_code, trust and specialty, so can be aggregated depending on the analysis of interest.
 
 
 ```{r data-download}
 
 # each metric must be downloaded separately
-completes <- NHSRtt::get_rtt_data(
-  type = "complete",
+monthly_rtt <- NHSRtt::get_rtt_data(
   date_start = calibration_start,
   date_end = validation_end,
+  trust_codes = analysis_trust, # the trust we are interested in
   show_progress = FALSE # can change this to TRUE to see progress
 )
 
-incompletes <- NHSRtt::get_rtt_data(
-  type = "incomplete",
-  date_start = calibration_start,
-  date_end = validation_end,
-  show_progress = FALSE # can change this to TRUE to see progress
-)
 
-referrals <- NHSRtt::get_rtt_data(
-  type = "referral",
-  date_start = calibration_start,
-  date_end = validation_end,
-  show_progress = FALSE # can change this to TRUE to see progress
-)
 ```
 
-Here is what the first 15 rows of data for the completes object looks like when it comes out of the `get_rtt_data()` function (this may change if this is run on a different date as the data update monthly):
+Here is what the first 15 rows of data for the monthly_rtt object looks like when it comes out of the `get_rtt_data()` function (this may change if this is run on a different date as the data update monthly on the live website):
 
 ```{r complete-data-example, echo=FALSE, tab.cap="Example completes data set following the download from the NHS website."}
 # this is what the completes data looks like:
 
 knitr::kable(
-  head(completes, 15)
+  head(monthly_rtt, 15)
 )
 ```
 
-For the purposes of this vignette, where we are performing the analysis on all activity (rather than by specialty), we append and aggregate the data before splitting it out again later into three datasets. The data manipulation here takes five steps:
+For the purposes of this vignette, where we are performing the analysis on all activity (rather than by specialty), we aggregate the data (because the selected trust will have multiple records assigned to the different commissioners, commissioner parent and trust parent) before splitting it out again later into three datasets. The data manipulation here takes five steps:
 
-1. filter for the trust of interest
-2. change the "type" column into "Complete", "Incomplete" and "Referrals"
-3. convert the months_waited string into an id using the `convert_months_waited_to_id()` function
-4. aggregate all the counts by specialty into one overall figure
-5. create a "period_id" numeric field for the sequential months in the dataset
+1. change the "type" column into "Complete", "Incomplete" and "Referrals"
+2. convert the months_waited string into an id using the `convert_months_waited_to_id()` function
+3. aggregate all the counts by specialty into one overall figure
+4. create a "period_id" numeric field for the sequential months in the dataset
 
 
 ```{r data-aggregation}
-monthly_rtt <- dplyr::bind_rows(
-  completes,
-  incompletes,
-  referrals
-) |>
-  filter(
-    trust == analysis_trust
-  ) |> 
+monthly_rtt <- monthly_rtt |> 
   mutate(
-    type = case_when(
-      type == "Non-Admitted" ~ "Complete",
-      type == "Admitted" ~ "Complete",
-      type == "New Periods" ~ "Referrals",
-      .default = type
-    ),
     months_waited_id = convert_months_waited_to_id(
       months_waited,
       max_months_waited
@@ -747,40 +721,12 @@ additional_end <- calibration_start - 1
 
 
 # each metric must be downloaded separately
-additional_completes <- NHSRtt::get_rtt_data(
-  type = "complete",
+additional_monthly_rtt <- NHSRtt::get_rtt_data(
   date_start = additional_start,
-  date_end = additional_end
-)
-
-additional_incompletes <- NHSRtt::get_rtt_data(
-  type = "incomplete",
-  date_start = additional_start,
-  date_end = additional_end
-)
-
-additional_referrals <- NHSRtt::get_rtt_data(
-  type = "referral",
-  date_start = additional_start,
-  date_end = additional_end
-)
-
-# append and manipulation
-additional_monthly_rtt <- dplyr::bind_rows(
-  additional_completes,
-  additional_incompletes,
-  additional_referrals
-) |>
-  filter(
-    trust == analysis_trust
-  ) |> 
+  date_end = additional_end,
+  trust_codes = analysis_trust
+) |> 
   mutate(
-    type = case_when(
-      type == "Non-Admitted" ~ "Complete",
-      type == "Admitted" ~ "Complete",
-      type == "New Periods" ~ "Referrals",
-      .default = type
-    ),
     months_waited_id = convert_months_waited_to_id(
       months_waited,
       max_months_waited

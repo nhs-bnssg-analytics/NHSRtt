@@ -108,7 +108,7 @@ test_that("apply_parameter_skew works", {
 
   expect_equal(
     tail(params_after, 1),
-    tail(params_before) * skew_factor,
+    tail(params_before, 1) * skew_factor,
     info = "final value is equal to the final value of the input multiplied by the skew factor"
   )
 
