@@ -349,8 +349,7 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
     months_waited_id = numeric(0),
     calculated_treatments = numeric(0),
     reneges = numeric(0),
-    incompletes = numeric(0),
-    input_treatments = numeric(0)
+    incompletes = numeric(0)
   )
 
   for (period in seq_len(length(referrals_projections))) {
@@ -378,10 +377,6 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         )
       ) |>
       dplyr::arrange(months_waited_id) |>
-      # add in the projections for  capacity
-      mutate(
-        capacity = capacity_projections[period]
-      ) |>
       # add in the renege and capacity params
       left_join(
         renege_capacity_params,
@@ -391,11 +386,11 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
       ) |>
       mutate(
         reneges = .data$renege_param * .data$node_inflow,
-        input_treatments = .data$capacity,
+        # add in the projections for  capacity
         capacity_numerator = .data$capacity_param * .data$node_inflow,
         capacity_denominator = sum(.data$capacity_numerator),
-        calculated_treatments = .data$input_treatments *
-          .data$capacity_numerator / .data$capacity_denominator,
+        calculated_treatments = capacity_projections[period] *
+          (.data$capacity_numerator / .data$capacity_denominator),
         # capacity parameter can be 0, resulting in NaN calculated treatments
         calculated_treatments = case_when(
           is.na(.data$calculated_treatments) ~ 0,
@@ -423,8 +418,7 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
         "months_waited_id",
         "calculated_treatments",
         "reneges",
-        "incompletes",
-        "input_treatments"
+        "incompletes"
       )
 
     projections = bind_rows(

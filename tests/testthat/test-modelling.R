@@ -251,9 +251,11 @@ test_that("calibrate_capacity_renege_params functionality", {
     dplyr::as_tibble()
 
   expected <- dplyr::tibble(
-     months_waited_id = c(0L, 1L, 2L, 3L, 4L),
-     renege_param = c(0.373061815, 0.463521759, 0.086835849, 0.079501717, 0.068946943),
-     capacity_param = c(0.029854199, 0.025546583, 0.043484007, 0.043833252, 0.04433586)
+    months_waited_id = c(0L, 1L, 2L, 3L, 4L),
+    renege_param = c(0.334417321,0.339838077,
+                     -0.048326982,-0.032519625,0.026375598),
+    capacity_param = c(0.031694413,0.031436282,
+                       0.049920332,0.049167601,0.046363067)
    )
 
   expect_equal(
@@ -261,7 +263,6 @@ test_that("calibrate_capacity_renege_params functionality", {
     expected,
     info = "calbrate_capacity_renege_params is what is expected"
   )
-
 })
 
 
@@ -446,12 +447,6 @@ test_that("apply_params_to_projections functionality", {
       814.2980541,3682.484151,8712.340773,
       90663.0542,289.7636484,821.7133229,
       4246.002057,19355.83087,528325.105
-    ),
-    input_treatments = c(
-      327L,327L,327L,327L,327L,
-      379L,379L,379L,379L,379L,449L,
-      449L,449L,449L,449L,400L,400L,400L,
-      400L,400L
     )
   )
 
