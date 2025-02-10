@@ -1,3 +1,8 @@
+# NHSRtt 0.2.1.9000
+
+* exports the skew parameter function
+
+
 # NHSRtt 0.2.1
 
 * Data import specialty code bug fix

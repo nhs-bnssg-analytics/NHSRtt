@@ -398,7 +398,7 @@ weibull_sample <- function(x) {
 #'   and the skew. The first item is held constant.
 #'
 #' @importFrom dplyr tibble
-#' @noRd
+#' @export
 #' @returns a revised numeric vector of parameters
 #'
 #' @examples
