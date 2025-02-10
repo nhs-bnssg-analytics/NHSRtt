@@ -1,3 +1,6 @@
+# NHSRtt 0.2.1
+
+* Data import specialty code bug fix
 
 # NHSRtt 0.2.0
 
