@@ -113,7 +113,8 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
       trust_parent_codes = trust_parent_codes,
       commissioner_parent_codes = commissioner_parent_codes,
       commissioner_org_codes = commissioner_org_codes,
-      trust_codes = trust_codes
+      trust_codes = trust_codes,
+      sepcialty_codes = specialty_codes
     ),
     .progress = show_progress
   ) |>
