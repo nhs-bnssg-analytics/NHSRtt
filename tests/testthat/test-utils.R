@@ -143,4 +143,13 @@ test_that("apply_parameter_skew errors", {
     info = "skew must be length 1"
   )
 
+  expect_error(
+    apply_parameter_skew(
+      params = c(0.05, 0.02, 0.02, 0.06, 0.08, 0.1),
+      skew = -0.1
+    ),
+    "skew must be greater than 0",
+    info = "skew must be > 0"
+  )
+
 })

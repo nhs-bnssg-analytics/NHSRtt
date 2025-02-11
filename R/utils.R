@@ -389,7 +389,8 @@ weibull_sample <- function(x) {
 #' @param params numeric vector of parameters; assumed to be in order of
 #'   increasing waiting times (bins)
 #' @param skew numeric; length 1, a multiplier to be used on the final
-#'   parameter. A skew of 1 will keep the params identical to the input params
+#'   parameter. A skew of 1 will keep the params identical to the input params.
+#'   Value must be greater than 0
 #'
 #' @details The skew parameter is applied to the final item of the params
 #'   vector. The inverse of the skew parameter is applied to the second item of
@@ -420,13 +421,17 @@ apply_parameter_skew <- function(params, skew) {
   if (length(skew) != 1)
     stop("skew must be length 1")
 
+  # check skew is not negative
+  if (skew <= 0)
+    stop("skew must be greater than 0")
+
   params_length <- length(params)
 
   if (params_length <= 2) return(params)
 
   lm_tbl <- dplyr::tibble(
     x = c(2, params_length),
-    y = c(1 - (skew - 1), skew)
+    y = c(1 / skew, skew)
   )
 
   fit <- lm(y ~ x, data = lm_tbl)
