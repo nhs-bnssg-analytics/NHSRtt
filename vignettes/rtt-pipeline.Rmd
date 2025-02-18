@@ -120,7 +120,6 @@ The public data ([source](https://www.england.nhs.uk/statistics/statistical-work
 
 ```{r data-download}
 
-# each metric must be downloaded separately
 monthly_rtt <- NHSRtt::get_rtt_data(
   date_start = calibration_start,
   date_end = validation_end,
@@ -128,12 +127,11 @@ monthly_rtt <- NHSRtt::get_rtt_data(
   show_progress = FALSE # can change this to TRUE to see progress
 )
 
-
 ```
 
 Here is what the first 15 rows of data for the monthly_rtt object looks like when it comes out of the `get_rtt_data()` function (this may change if this is run on a different date as the data update monthly on the live website):
 
-```{r complete-data-example, echo=FALSE, tab.cap="Example completes data set following the download from the NHS website."}
+```{r complete-data-example, echo=FALSE, tab.cap="Example data set following the download from the NHS website."}
 # this is what the completes data looks like:
 
 knitr::kable(
@@ -297,8 +295,14 @@ params <- calibrate_capacity_renege_params(
   completes = completes,
   incompletes = incompletes,
   max_months_waited = max_months_waited,
-  redistribute_m0_reneges = TRUE, 
-  full_breakdown = FALSE # this can be set to TRUE to see all the transitions for all months waited at each time step
+  # if negative reneges are calculated in the first waiting bin, these are
+  # reassigned as referrals when redistribute_m0_reneges value is TRUE (though
+  # we must make sure that referrals passed to the projection period are
+  # uplifted in the same way for consistency)
+  redistribute_m0_reneges = FALSE, 
+  # full_breakdown can be set to TRUE to see all the transitions for all months
+  # waited at each time step
+  full_breakdown = FALSE 
 )
 ```
 
@@ -328,7 +332,7 @@ validation_period <- monthly_rtt |>
   filter(
     between(
       period,
-      lubridate::floor_date(calibration_end, unit = "months"), # this helps the user pick up the incompletes from the previous month
+      validation_start %m-% months(1), # this helps the user pick up the incompletes from the previous month
       validation_end
     )
   ) |>
