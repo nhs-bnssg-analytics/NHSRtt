@@ -11,6 +11,7 @@ optimise_capacity(
   renege_capacity_params,
   target,
   target_bin,
+  capacity_profile = "linear_change",
   tolerance,
   max_iterations = 50
 )
@@ -39,6 +40,12 @@ renege_param, which are outputs from the function
 
 \item{target_bin}{numeric length 1; the bin that the target refers to. It
 must be less than or equal to the max_months_waited value}
+
+\item{capacity_profile}{string, one of "linear_change" or "flat"; determines
+how the capacity counts vary into the future. Linear change means that the
+first point is held stationary and the end point is varied, with a linear
+interpolation between the two points. Flat means that capacity remains
+constant into the future}
 
 \item{tolerance}{numeric length 1; the tolerance used to compare the absolute
 error with in the max_months_waited bin to determine convergence. The

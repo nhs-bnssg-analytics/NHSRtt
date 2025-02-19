@@ -205,6 +205,20 @@ test_that("optimise_capacity errors", {
     "tolerance must be length 1",
     info = "tolerance must be length 1"
   )
+
+  expect_snapshot(
+    optimise_capacity(
+      t_1_capacity = future_capacity,
+      referrals_projections = future_referrals,
+      incomplete_pathways = incompletes_t0,
+      renege_capacity_params = params,
+      target_bin = max_months,
+      target = "~-2%",
+      capacity_profile = "flart",
+      tolerance = 0.005
+    ),
+    error = TRUE
+  )
 })
 
 test_that("optimise_capacity functionality", {
@@ -322,6 +336,21 @@ test_that("optimise_capacity functionality", {
       tolerance = 0.005
     ),
     c(converged = 0.71875),
-    info = "optimise_capacity consistently produces an answer"
+    info = "optimise_capacity consistently produces an answer with linear_change profile"
+  )
+
+  expect_equal(
+    optimise_capacity(
+      t_1_capacity = future_capacity,
+      referrals_projections = future_referrals,
+      incomplete_pathways = incompletes_t0,
+      renege_capacity_params = params,
+      target_bin = max_months,
+      target = "~-2%",
+      capacity_profile = "flat",
+      tolerance = 0.005
+    ),
+    c(converged = 0.6875),
+    info = "optimise_capacity consistently produces an answer with flat profile"
   )
 })
