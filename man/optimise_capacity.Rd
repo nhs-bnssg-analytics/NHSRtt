@@ -12,6 +12,7 @@ optimise_capacity(
   target,
   target_bin,
   capacity_profile = "linear_change",
+  surplus_treatment_redistribution_method = "evenly",
   tolerance,
   max_iterations = 50
 )
@@ -46,6 +47,11 @@ how the capacity counts vary into the future. Linear change means that the
 first point is held stationary and the end point is varied, with a linear
 interpolation between the two points. Flat means that capacity remains
 constant into the future}
+
+\item{surplus_treatment_redistribution_method}{string; one of "none",
+"evenly" or "prioritise_long_waiters"; should cases where the counts of
+reneges and treatments exceed the counts of people waiting be
+redistributed, and if so, which method should be used}
 
 \item{tolerance}{numeric length 1; the tolerance used to compare the absolute
 error with in the max_months_waited bin to determine convergence. The

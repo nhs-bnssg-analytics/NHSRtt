@@ -34,6 +34,7 @@
 optimise_capacity <- function(t_1_capacity, referrals_projections,
                               incomplete_pathways, renege_capacity_params,
                               target, target_bin, capacity_profile = "linear_change",
+                              surplus_treatment_redistribution_method = "evenly",
                               tolerance, max_iterations = 50) {
 
   # checks
@@ -206,7 +207,8 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       referrals_projections = referrals_projections,
       incomplete_pathways = incomplete_pathways,
       renege_capacity_params = renege_capacity_params,
-      max_months_waited = max_months_waited
+      max_months_waited = max_months_waited,
+      surplus_treatment_redistribution_method = surplus_treatment_redistribution_method
     ) |>
       filter(
         period_id == max(period_id)
