@@ -151,14 +151,17 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
                       commissioner_parent_codes = NULL,
                       commissioner_org_codes = NULL,
                       trust_codes = NULL, specialty_codes = NULL) {
-
+# browser()
   rtt <- data.table::fread(
     input = csv_filepath,
     na.strings = ""
   ) |>
+    chop_top_off_data() |>
+    make_period_field() |>
+    adjust_treatment_function_field_name() |>
     lazy_dt() |>
     dplyr::select(
-      period = "Period",
+      period = any_of(c("Period", "Period Name")),
       trust_parent_org_code = "Provider Parent Org Code",
       commissioner_parent_org_code = "Commissioner Parent Org Code",
       commissioner_org_code = "Commissioner Org Code",
@@ -178,7 +181,6 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
       .data$commissioner_org_code != "NONC"
     ) |>
     dplyr::mutate(
-      period = as.Date(gsub("RTT", "01", .data$period), format = "%d-%B-%Y"),
       type = data.table::fcase(
         .data$type == "Incomplete Pathways", "Incomplete",
         .data$type == "New RTT Periods - All Patients", "Referrals",
@@ -228,7 +230,8 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
     filter(
       .data$type == "Referrals"
     ) |>
-    mutate(months_waited = "<1") |>
+    mutate(months_waited = "<1",
+           total_all = as.numeric(total_all)) |>
     select(
       "trust_parent_org_code",
       "commissioner_parent_org_code",
@@ -303,7 +306,7 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
           levels = c("<1", paste(0:23, 1:24, sep = "-"), "24+")
         )
       )
-
+# browser()
     rtt <- compl_incompl |>
       dtplyr::lazy_dt() |>
       dplyr::left_join(

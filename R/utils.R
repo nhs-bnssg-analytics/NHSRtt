@@ -89,6 +89,92 @@ download_unzip_files <- function(zip_url) {
 
 # data processing ---------------------------------------------------------
 
+
+#' Removes the first few rows of data if they don't belong to table (eg, they
+#' have rows of NAs in the source file)
+#'
+#' @param data data.frame
+#' @importFrom dplyr mutate across starts_with
+#' @returns data.frame with fewer rows if all the column names beging with V
+#' @noRd
+chop_top_off_data <- function(data) {
+  if (all(grepl("V", names(data)))) {
+    final_na_row <- max(
+      match(NA, data$V1)
+    )
+    new_names <- data[final_na_row + 1, ] |>
+      as.character()
+
+    data <- data[-seq_len(final_na_row + 1),] |>
+      setNames(nm = new_names) |>
+      mutate(
+        across(
+          starts_with("Gt"),
+          as.numeric
+        )
+      )
+
+  }
+  return(data)
+}
+
+#' Some months have "Treatment function name" for the "Treatment function code"
+#' field. This function will check and fix that problem
+adjust_treatment_function_field_name <- function(data) {
+  nms <- names(data)
+
+  if (!("Treatment Function Code" %in% nms)) {
+    nms[nms == "Treatment Function Name"] <- "Treatment Function Code"
+  }
+
+  names(data) <- nms
+
+  return(data)
+}
+
+#' Manipulates the year and period fields in the raw data files so they provide
+#' the correct period
+#'
+#' @param data data.frame
+#'
+#' @returns data.frame
+#' @noRd
+make_period_field <- function(data) {
+  nms <- names(data)
+
+  period_name <- names(data)[grep("^Period", names(data))]
+  period <- unique(data[[period_name]])
+
+  if ("Year" %in% nms) {
+
+    yr <- as.numeric(
+      substr(unique(data[["Year"]]), 1, 4)
+    )
+
+    mnth <- match(tolower(period), tolower(month.name))
+
+    if (mnth < 4) yr <- yr + 1
+
+    final_period <- as.Date(
+      paste(
+        yr,
+        mnth,
+        1,
+        sep = "-"
+      )
+    )
+  } else {
+    final_period <- as.Date(
+      gsub("RTT", "01", period),
+      format = "%d-%B-%Y"
+    )
+  }
+
+  data[[period_name]] <- final_period
+
+  return(data)
+}
+
 #' creates table of weights to apply to dates that represent the end of a week.
 #' These weights correspond tot he proportion of that week's counts that fall
 #' into the month that the "week end date" occurs, and the proportion of the
