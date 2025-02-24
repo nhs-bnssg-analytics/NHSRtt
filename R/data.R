@@ -1,3 +1,35 @@
+#' Returns the date of the latest available data
+#'
+#' @inheritParams get_rtt_data
+#'
+#' @returns the latest date of available data
+#' @export
+#'
+#' @examples latest_rtt_date()
+latest_rtt_date <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/") {
+  annual_urls <- obtain_links(url) |>
+    (\(x) x[grepl("^[0-9]{4}-[0-9]{2}", names(x))])() |>
+    (\(x) x[!grepl("xls$", x)])() |>
+    head(1) |>
+    (\(x) obtain_links(x))() |>
+    (\(x) x[grepl("zip$", x)])() |>
+    head(1)
+
+  latest_date <- as.Date(
+    paste0(
+      '01',
+      sub(".*?\\b([A-Za-z]{3}\\d{2}).*", "\\1", str)),
+    format = '%d%b%y'
+  )
+
+  latest_date <- lubridate::ceiling_date(
+    latest_date,
+    unit = "months"
+  ) - 1
+
+  return(latest_date)
+}
+
 
 #' Download and tidy the referral to treatment data from the NHS Statistics
 #' webpage
