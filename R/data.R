@@ -18,7 +18,7 @@ latest_rtt_date <- function(url = "https://www.england.nhs.uk/statistics/statist
   latest_date <- as.Date(
     paste0(
       '01',
-      sub(".*?\\b([A-Za-z]{3}\\d{2}).*", "\\1", str)),
+      sub(".*?\\b([A-Za-z]{3}\\d{2}).*", "\\1", annual_urls)),
     format = '%d%b%y'
   )
 
