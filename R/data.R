@@ -1,6 +1,7 @@
 #' Returns the date of the latest available data
 #'
 #' @inheritParams get_rtt_data
+#' @importFrom utils head
 #'
 #' @returns the latest date of available data
 #' @export
@@ -174,7 +175,7 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
 #' @importFrom data.table fread fcase
 #' @importFrom dtplyr lazy_dt
 #' @importFrom dplyr select mutate summarise left_join join_by starts_with
-#'   distinct as_tibble filter union
+#'   distinct as_tibble filter union any_of
 #' @importFrom tidyr pivot_longer
 #' @importFrom lubridate ceiling_date month year
 #' @importFrom rlang .data
@@ -262,8 +263,10 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
     filter(
       .data$type == "Referrals"
     ) |>
-    mutate(months_waited = "<1",
-           total_all = as.numeric(total_all)) |>
+    mutate(
+      months_waited = "<1",
+      total_all = as.numeric(.data$total_all)
+    ) |>
     select(
       "trust_parent_org_code",
       "commissioner_parent_org_code",

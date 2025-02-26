@@ -120,6 +120,7 @@ chop_top_off_data <- function(data) {
 
 #' Some months have "Treatment function name" for the "Treatment function code"
 #' field. This function will check and fix that problem
+#' @noRd
 adjust_treatment_function_field_name <- function(data) {
   nms <- names(data)
 
@@ -477,6 +478,19 @@ weibull_sample <- function(x) {
 #' @param skew numeric; length 1, a multiplier to be used on the final
 #'   parameter. A skew of 1 will keep the params identical to the input params.
 #'   Value must be greater than 0
+#' @param skew_method character; one of "rotate" or "uniform". The "rotate"
+#'   method will multiply the highest bin by the skew value, the pivot_bin will
+#'   remain the same as its input, and all of the other bins between the pivot
+#'   bin and the highest bin will be multiplied by an interpolated value between
+#'   1 and the skew value. Bins between the second bin and the pivot bin will be
+#'   multiplied by interpolated value between (1 / skew) and 1. If the method is
+#'   "uniform", then all of the bins greater than or equal to the pivot bin will
+#'   be multiplied by the skew value, and the bins below the pivot bin will be
+#'   multiplied by (1 / skew)
+#' @param pivot_bin numeric; when applying the skew, whichever method, select a
+#'   bin to pivot around. If NULL, the mid-bin between the highest available bin
+#'   and the second bin will be used. The first item of the parameter inputs is
+#'   bin 0, so a pivot_bin of 2, will be the third item
 #'
 #' @details The skew parameter is applied to the final item of the params
 #'   vector. The inverse of the skew parameter is applied to the second item of
@@ -493,7 +507,7 @@ weibull_sample <- function(x) {
 #'   params = c(0.03, 0.02, 0.02, 0.01, 0.04, 0.05),
 #'   skew = 1.05
 #' )
-apply_parameter_skew <- function(params, skew) {
+apply_parameter_skew <- function(params, skew, skew_method = "rotate", pivot_bin = NULL) {
 
   # check params is numeric
   if (!is.numeric(params))
@@ -511,24 +525,86 @@ apply_parameter_skew <- function(params, skew) {
   if (skew <= 0)
     stop("skew must be greater than 0")
 
+  # check skew_method input
+  skew_method <- match.arg(
+    skew_method,
+    c("rotate", "uniform")
+  )
+
   params_length <- length(params)
 
   if (params_length <= 2) return(params)
 
-  lm_tbl <- dplyr::tibble(
-    x = c(2, params_length),
-    y = c(1 / skew, skew)
-  )
+  if (is.null(pivot_bin)) {
+    pivot_bin <- (params_length / 2)
+  }
 
-  fit <- lm(y ~ x, data = lm_tbl)
+  #  plus one is to avoid the first compartment
+  pivot_bin <- pivot_bin + 1
 
-  multipliers <- predict(
-    object = fit,
-    newdata = tibble(x = 2:params_length)
-  )
+  if (skew_method == "rotate") {
 
-  params_out <- params * c(1, multipliers) |>
-    unname()
+    rotate_func <- function(bottom_bin, top_bin, skew, location_relative_to_pivot) {
+
+      if (location_relative_to_pivot == "above_pivot") {
+        skew_vals <- c(1, skew)
+
+        pivot_rounded <- ceiling(bottom_bin)
+        new_x_vals <- seq(pivot_rounded, top_bin)
+      } else if (location_relative_to_pivot == "below_pivot") {
+        skew_vals <- c((1 / skew), 1)
+
+        pivot_rounded <- floor(top_bin)
+        new_x_vals <- seq(bottom_bin, pivot_rounded)
+      }
+
+      lm_tbl <- dplyr::tibble(
+        x = c(bottom_bin, top_bin),
+        y = skew_vals
+      )
+
+      fit <- lm(y ~ x, data = lm_tbl)
+
+      multipliers <- predict(
+        object = fit,
+        newdata = tibble(x = new_x_vals)
+      ) |>
+        unname()
+
+      return(multipliers)
+    }
+
+    below_pivot_multipliers <- rotate_func(
+      bottom_bin = 2,
+      top_bin = pivot_bin,
+      skew = skew,
+      location_relative_to_pivot = "below_pivot"
+    )
+
+    above_pivot_multipliers <- rotate_func(
+      bottom_bin = pivot_bin,
+      top_bin = params_length,
+      skew = skew,
+      location_relative_to_pivot = "above_pivot"
+    )
+
+    if (pivot_bin %% 1 == 0) above_pivot_multipliers <- above_pivot_multipliers[-1]
+
+    params_out <- params * c(1, below_pivot_multipliers, above_pivot_multipliers)
+
+  } else if (skew_method == "uniform") {
+
+    if (pivot_bin %% 1 != 0) pivot_bin <- ceiling(pivot_bin)
+
+    params_temp <- params
+    params_temp[2:(pivot_bin - 1)] <-
+      params_temp[2:(pivot_bin - 1)] * (1 / skew)
+
+    params_temp[pivot_bin:params_length] <-
+      params_temp[pivot_bin:params_length] * skew
+
+    params_out <- params_temp
+  }
 
   return(params_out)
 }
