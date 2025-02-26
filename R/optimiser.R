@@ -8,6 +8,11 @@
 #'   "~-5\%" or a percent value, eg, "5\%"
 #' @param target_bin numeric length 1; the bin that the target refers to. It
 #'   must be less than or equal to the max_months_waited value
+#' @param capacity_profile string, one of "linear_change" or "flat"; determines
+#'   how the capacity counts vary into the future. Linear change means that the
+#'   first point is held stationary and the end point is varied, with a linear
+#'   interpolation between the two points. Flat means that capacity remains
+#'   constant into the future
 #' @param tolerance numeric length 1; the tolerance used to compare the absolute
 #'   error with in the max_months_waited bin to determine convergence. The
 #'   absolute error is calculated on the proportion in the max_months_waited bin
@@ -28,7 +33,8 @@
 #'
 optimise_capacity <- function(t_1_capacity, referrals_projections,
                               incomplete_pathways, renege_capacity_params,
-                              target, target_bin,
+                              target, target_bin, capacity_profile = "linear_change",
+                              surplus_treatment_redistribution_method = "evenly",
                               tolerance, max_iterations = 50) {
 
   # checks
@@ -104,6 +110,12 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     return(change_proportion)
   }
 
+  # check inputs to capacity_profile
+  capacity_profile <- match.arg(
+    capacity_profile,
+    c("linear_change", "flat")
+  )
+
   # target calculation
   current_val <- incomplete_pathways |>
     mutate(
@@ -161,19 +173,30 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   min_change_proportion <- NULL
 
   while (converged == FALSE) {
-    # build linear model for monthly capacity
-    lm_fit <- stats::lm(
-      capacity ~ period,
-      data = tibble(
-        capacity = c(t_1_capacity, t_1_capacity * change_proportion),
-        period = c(1, 13)
-      ))
 
-    capacity_projections <- stats::predict(
-      object = lm_fit,
-      newdata = tibble(period = 1:length(referrals_projections))
-    ) |>
-      unname()
+    if (capacity_profile == "linear_change") {
+      # build linear model for monthly capacity
+      lm_fit <- stats::lm(
+        capacity ~ period,
+        data = tibble(
+          capacity = c(t_1_capacity, t_1_capacity * change_proportion),
+          period = c(1, 13)
+        ))
+
+      capacity_projections <- stats::predict(
+        object = lm_fit,
+        newdata = tibble(period = 1:length(referrals_projections))
+      ) |>
+        unname()
+
+    } else if (capacity_profile == "flat") {
+      # create a flat profile for capacity with the same length as the referrals
+      # profile
+      capacity_projections <- rep(
+        t_1_capacity * change_proportion,
+        length(referrals_projections)
+      )
+    }
 
     # floor the data at 0 because negative capacity is not possible
     capacity_projections[capacity_projections < 0] <- 0
@@ -184,7 +207,8 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
       referrals_projections = referrals_projections,
       incomplete_pathways = incomplete_pathways,
       renege_capacity_params = renege_capacity_params,
-      max_months_waited = max_months_waited
+      max_months_waited = max_months_waited,
+      surplus_treatment_redistribution_method = surplus_treatment_redistribution_method
     ) |>
       filter(
         period_id == max(period_id)

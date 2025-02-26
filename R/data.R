@@ -1,3 +1,36 @@
+#' Returns the date of the latest available data
+#'
+#' @inheritParams get_rtt_data
+#' @importFrom utils head
+#'
+#' @returns the latest date of available data
+#' @export
+#'
+#' @examples latest_rtt_date()
+latest_rtt_date <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/") {
+  annual_urls <- obtain_links(url) |>
+    (\(x) x[grepl("^[0-9]{4}-[0-9]{2}", names(x))])() |>
+    (\(x) x[!grepl("xls$", x)])() |>
+    head(1) |>
+    (\(x) obtain_links(x))() |>
+    (\(x) x[grepl("zip$", x)])() |>
+    head(1)
+
+  latest_date <- as.Date(
+    paste0(
+      '01',
+      sub(".*?\\b([A-Za-z]{3}\\d{2}).*", "\\1", annual_urls)),
+    format = '%d%b%y'
+  )
+
+  latest_date <- lubridate::ceiling_date(
+    latest_date,
+    unit = "months"
+  ) - 1
+
+  return(latest_date)
+}
+
 
 #' Download and tidy the referral to treatment data from the NHS Statistics
 #' webpage
@@ -142,7 +175,7 @@ get_rtt_data <- function(url = "https://www.england.nhs.uk/statistics/statistica
 #' @importFrom data.table fread fcase
 #' @importFrom dtplyr lazy_dt
 #' @importFrom dplyr select mutate summarise left_join join_by starts_with
-#'   distinct as_tibble filter union
+#'   distinct as_tibble filter union any_of
 #' @importFrom tidyr pivot_longer
 #' @importFrom lubridate ceiling_date month year
 #' @importFrom rlang .data
@@ -151,14 +184,17 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
                       commissioner_parent_codes = NULL,
                       commissioner_org_codes = NULL,
                       trust_codes = NULL, specialty_codes = NULL) {
-
+# browser()
   rtt <- data.table::fread(
     input = csv_filepath,
     na.strings = ""
   ) |>
+    chop_top_off_data() |>
+    make_period_field() |>
+    adjust_treatment_function_field_name() |>
     lazy_dt() |>
     dplyr::select(
-      period = "Period",
+      period = any_of(c("Period", "Period Name")),
       trust_parent_org_code = "Provider Parent Org Code",
       commissioner_parent_org_code = "Commissioner Parent Org Code",
       commissioner_org_code = "Commissioner Org Code",
@@ -178,7 +214,6 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
       .data$commissioner_org_code != "NONC"
     ) |>
     dplyr::mutate(
-      period = as.Date(gsub("RTT", "01", .data$period), format = "%d-%B-%Y"),
       type = data.table::fcase(
         .data$type == "Incomplete Pathways", "Incomplete",
         .data$type == "New RTT Periods - All Patients", "Referrals",
@@ -228,7 +263,10 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
     filter(
       .data$type == "Referrals"
     ) |>
-    mutate(months_waited = "<1") |>
+    mutate(
+      months_waited = "<1",
+      total_all = as.numeric(.data$total_all)
+    ) |>
     select(
       "trust_parent_org_code",
       "commissioner_parent_org_code",
@@ -303,7 +341,7 @@ tidy_file <- function(csv_filepath, trust_parent_codes = NULL,
           levels = c("<1", paste(0:23, 1:24, sep = "-"), "24+")
         )
       )
-
+# browser()
     rtt <- compl_incompl |>
       dtplyr::lazy_dt() |>
       dplyr::left_join(

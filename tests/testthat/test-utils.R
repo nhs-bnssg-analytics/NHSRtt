@@ -89,6 +89,7 @@ test_that("redistribute_incompletes_optimally works", {
 test_that("apply_parameter_skew works", {
   params_before <- c(0.05, 0.02, 0.02, 0.06, 0.08, 0.1)
   skew_factor <- 1.1
+
   params_after <- apply_parameter_skew(
     params = params_before,
     skew = skew_factor
@@ -112,6 +113,52 @@ test_that("apply_parameter_skew works", {
     info = "final value is equal to the final value of the input multiplied by the skew factor"
   )
 
+  # testing uniform skew with a pivot_bin
+
+  piv_bin <- 2
+  params_after <- apply_parameter_skew(
+    params = params_before,
+    skew = skew_factor,
+    skew_method = "uniform",
+    pivot_bin = piv_bin
+  )
+
+  expect_equal(
+    params_after[1:piv_bin],
+    c(params_before[1], params_before[2:piv_bin] * (1 / skew_factor)),
+    info = "outputs below the pivot bin are correct"
+  )
+
+  expect_equal(
+    params_after[(piv_bin + 1):length(params_after)],
+    params_before[(piv_bin + 1):length(params_after)] * skew_factor,
+    info = "outputs above the pivot bin are correct"
+  )
+
+  # test non-integer pivot_bin
+  piv_bin <- 4.5
+  params_after <- apply_parameter_skew(
+    params = params_before,
+    skew = skew_factor,
+    skew_method = "rotate",
+    pivot_bin = piv_bin
+  )
+
+  expect_equal(
+    params_after[1],
+    params_before[1],
+    info = "first compartment remains unchanged"
+  )
+
+  expect_true(
+    all(params_after[2:floor(piv_bin + 1)] < params_before[2:floor(piv_bin + 1)]),
+    info = "all param vals bar the first one that are below the pivot bin are less than the input params"
+  )
+
+  expect_true(
+    tail(params_after, 1) > tail(params_before, 1),
+    info = "final param value is greater than the final input param value"
+  )
 })
 
 test_that("apply_parameter_skew errors", {
@@ -143,4 +190,21 @@ test_that("apply_parameter_skew errors", {
     info = "skew must be length 1"
   )
 
+  expect_error(
+    apply_parameter_skew(
+      params = c(0.05, 0.02, 0.02, 0.06, 0.08, 0.1),
+      skew = -0.1
+    ),
+    "skew must be greater than 0",
+    info = "skew must be > 0"
+  )
+
+  expect_snapshot(
+    apply_parameter_skew(
+      params = c(0.05, 0.02, 0.02, 0.06, 0.08, 0.1),
+      skew = 1.1,
+      skew_method = "unknown"
+    ),
+    error = TRUE
+  )
 })

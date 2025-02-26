@@ -1,3 +1,11 @@
+# NHSRtt 0.2.2
+
+* exports the skew parameter function
+* allows specification on where pivoting happens for skew parameter
+* skew function provides two different skew methods
+* adds `latest_rtt_date()`
+* data import works on more months of historic data
+
 # NHSRtt 0.2.1
 
 * Data import specialty code bug fix
