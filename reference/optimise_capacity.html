@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">NHSRtt</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,6 +50,8 @@
 <span>  <span class="va">renege_capacity_params</span>,</span>
 <span>  <span class="va">target</span>,</span>
 <span>  <span class="va">target_bin</span>,</span>
+<span>  capacity_profile <span class="op">=</span> <span class="st">"linear_change"</span>,</span>
+<span>  surplus_treatment_redistribution_method <span class="op">=</span> <span class="st">"evenly"</span>,</span>
 <span>  <span class="va">tolerance</span>,</span>
 <span>  max_iterations <span class="op">=</span> <span class="fl">50</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -93,6 +95,21 @@ renege_param, which are outputs from the function
 <dt id="arg-target-bin">target_bin<a class="anchor" aria-label="anchor" href="#arg-target-bin"></a></dt>
 <dd><p>numeric length 1; the bin that the target refers to. It
 must be less than or equal to the max_months_waited value</p></dd>
+
+
+<dt id="arg-capacity-profile">capacity_profile<a class="anchor" aria-label="anchor" href="#arg-capacity-profile"></a></dt>
+<dd><p>string, one of "linear_change" or "flat"; determines
+how the capacity counts vary into the future. Linear change means that the
+first point is held stationary and the end point is varied, with a linear
+interpolation between the two points. Flat means that capacity remains
+constant into the future</p></dd>
+
+
+<dt id="arg-surplus-treatment-redistribution-method">surplus_treatment_redistribution_method<a class="anchor" aria-label="anchor" href="#arg-surplus-treatment-redistribution-method"></a></dt>
+<dd><p>string; one of "none",
+"evenly" or "prioritise_long_waiters"; should cases where the counts of
+reneges and treatments exceed the counts of people waiting be
+redistributed, and if so, which method should be used</p></dd>
 
 
 <dt id="arg-tolerance">tolerance<a class="anchor" aria-label="anchor" href="#arg-tolerance"></a></dt>

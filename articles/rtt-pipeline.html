@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">NHSRtt</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -131,7 +131,6 @@ specialty, so can be aggregated depending on the analysis of
 interest.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
-<span><span class="co"># each metric must be downloaded separately</span></span>
 <span><span class="va">monthly_rtt</span> <span class="op">&lt;-</span> <span class="fu">NHSRtt</span><span class="fu">::</span><span class="fu"><a href="../reference/get_rtt_data.html">get_rtt_data</a></span><span class="op">(</span></span>
 <span>  date_start <span class="op">=</span> <span class="va">calibration_start</span>,</span>
 <span>  date_end <span class="op">=</span> <span class="va">validation_end</span>,</span>
@@ -143,7 +142,7 @@ looks like when it comes out of the <code><a href="../reference/get_rtt_data.htm
 (this may change if this is run on a different date as the data update
 monthly on the live website):</p>
 <table class="table">
-<caption>Example completes data set following the download from the NHS
+<caption>Example data set following the download from the NHS
 website.</caption>
 <colgroup>
 <col width="16%">
@@ -731,9 +730,17 @@ referrals. This is done by setting the
 <span>  completes <span class="op">=</span> <span class="va">completes</span>,</span>
 <span>  incompletes <span class="op">=</span> <span class="va">incompletes</span>,</span>
 <span>  max_months_waited <span class="op">=</span> <span class="va">max_months_waited</span>,</span>
-<span>  redistribute_m0_reneges <span class="op">=</span> <span class="cn">TRUE</span>, </span>
-<span>  full_breakdown <span class="op">=</span> <span class="cn">FALSE</span> <span class="co"># this can be set to TRUE to see all the transitions for all months waited at each time step</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="co"># if negative reneges are calculated in the first waiting bin, these are</span></span>
+<span>  <span class="co"># reassigned as referrals when redistribute_m0_reneges value is TRUE (though</span></span>
+<span>  <span class="co"># we must make sure that referrals passed to the projection period are</span></span>
+<span>  <span class="co"># uplifted in the same way for consistency)</span></span>
+<span>  redistribute_m0_reneges <span class="op">=</span> <span class="cn">FALSE</span>, </span>
+<span>  <span class="co"># full_breakdown can be set to TRUE to see all the transitions for all months</span></span>
+<span>  <span class="co"># waited at each time step</span></span>
+<span>  full_breakdown <span class="op">=</span> <span class="cn">FALSE</span> </span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in calibrate_capacity_renege_params(referrals = referrals, completes =</span></span>
+<span><span class="co">#&gt; completes, : negative renege parameters present, investigate raw data</span></span></code></pre></div>
 <table class="table">
 <caption>The structure of the output from the
 <code><a href="../reference/calibrate_capacity_renege_params.html">calibrate_capacity_renege_params()</a></code> function.</caption>
@@ -745,8 +752,8 @@ referrals. This is done by setting the
 <tbody>
 <tr class="odd">
 <td align="right">0</td>
-<td align="right">0.0000000</td>
-<td align="right">0.2281000</td>
+<td align="right">-0.0544636</td>
+<td align="right">0.2403923</td>
 </tr>
 <tr class="even">
 <td align="right">1</td>
@@ -839,7 +846,7 @@ filter for the validation time period.</p>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://dplyr.tidyverse.org/reference/between.html" class="external-link">between</a></span><span class="op">(</span></span>
 <span>      <span class="va">period</span>,</span>
-<span>      <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/round_date.html" class="external-link">floor_date</a></span><span class="op">(</span><span class="va">calibration_end</span>, unit <span class="op">=</span> <span class="st">"months"</span><span class="op">)</span>, <span class="co"># this helps the user pick up the incompletes from the previous month</span></span>
+<span>      <span class="va">validation_start</span> <span class="op"><a href="https://lubridate.tidyverse.org/reference/mplus.html" class="external-link">%m-%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/weekday.POSIXt.html" class="external-link">months</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="co"># this helps the user pick up the incompletes from the previous month</span></span>
 <span>      <span class="va">validation_end</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -979,10 +986,10 @@ of stocks at each time step.</p>
 <caption>Example of the outputs from the
 <code><a href="../reference/apply_params_to_projections.html">apply_params_to_projections()</a></code> function.</caption>
 <colgroup>
-<col width="14%">
+<col width="13%">
 <col width="23%">
 <col width="30%">
-<col width="14%">
+<col width="15%">
 <col width="16%">
 </colgroup>
 <thead><tr class="header">
@@ -996,142 +1003,142 @@ of stocks at each time step.</p>
 <tr class="odd">
 <td align="right">1</td>
 <td align="right">0</td>
-<td align="right">8117.1148</td>
-<td align="right">0.0000</td>
-<td align="right">29448.885</td>
+<td align="right">8383.8462</td>
+<td align="right">-2045.9795</td>
+<td align="right">31228.133</td>
 </tr>
 <tr class="even">
 <td align="right">1</td>
 <td align="right">1</td>
-<td align="right">2346.6839</td>
+<td align="right">2299.8566</td>
 <td align="right">1181.1739</td>
-<td align="right">26774.142</td>
+<td align="right">26820.969</td>
 </tr>
 <tr class="odd">
 <td align="right">1</td>
 <td align="right">2</td>
-<td align="right">1603.0545</td>
+<td align="right">1571.0662</td>
 <td align="right">1237.5128</td>
-<td align="right">24829.147</td>
+<td align="right">24861.135</td>
 </tr>
 <tr class="even">
 <td align="right">1</td>
 <td align="right">3</td>
-<td align="right">1404.8598</td>
+<td align="right">1376.8263</td>
 <td align="right">1196.0281</td>
-<td align="right">21787.112</td>
+<td align="right">21815.146</td>
 </tr>
 <tr class="odd">
 <td align="right">1</td>
 <td align="right">4</td>
-<td align="right">1170.9690</td>
+<td align="right">1147.6027</td>
 <td align="right">2192.3861</td>
-<td align="right">17933.788</td>
+<td align="right">17957.154</td>
 </tr>
 <tr class="even">
 <td align="right">1</td>
 <td align="right">5</td>
-<td align="right">802.8891</td>
+<td align="right">786.8677</td>
 <td align="right">1167.3807</td>
-<td align="right">13681.159</td>
+<td align="right">13697.180</td>
 </tr>
 <tr class="odd">
 <td align="right">1</td>
 <td align="right">6</td>
-<td align="right">800.5091</td>
+<td align="right">784.5353</td>
 <td align="right">1096.5386</td>
-<td align="right">13462.667</td>
+<td align="right">13478.640</td>
 </tr>
 <tr class="even">
 <td align="right">1</td>
 <td align="right">7</td>
-<td align="right">745.6579</td>
+<td align="right">730.7786</td>
 <td align="right">902.3821</td>
-<td align="right">12357.389</td>
+<td align="right">12372.268</td>
 </tr>
 <tr class="odd">
 <td align="right">1</td>
 <td align="right">8</td>
-<td align="right">693.6169</td>
+<td align="right">679.7760</td>
 <td align="right">1092.1829</td>
-<td align="right">10062.486</td>
+<td align="right">10076.327</td>
 </tr>
 <tr class="even">
 <td align="right">1</td>
 <td align="right">9</td>
-<td align="right">592.6632</td>
+<td align="right">580.8369</td>
 <td align="right">868.4978</td>
-<td align="right">7762.553</td>
+<td align="right">7774.380</td>
 </tr>
 <tr class="odd">
 <td align="right">1</td>
 <td align="right">10</td>
-<td align="right">554.3631</td>
+<td align="right">543.3010</td>
 <td align="right">908.1333</td>
-<td align="right">6702.932</td>
+<td align="right">6713.994</td>
 </tr>
 <tr class="even">
 <td align="right">1</td>
 <td align="right">11</td>
-<td align="right">541.0084</td>
+<td align="right">530.2128</td>
 <td align="right">930.2423</td>
-<td align="right">5187.606</td>
+<td align="right">5198.402</td>
 </tr>
 <tr class="odd">
 <td align="right">1</td>
 <td align="right">12</td>
-<td align="right">2110.6102</td>
+<td align="right">2068.4937</td>
 <td align="right">3165.2174</td>
-<td align="right">11266.458</td>
+<td align="right">11308.575</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="right">0</td>
-<td align="right">8522.7776</td>
-<td align="right">0.0000</td>
-<td align="right">31067.222</td>
+<td align="right">8735.6236</td>
+<td align="right">-2156.2138</td>
+<td align="right">33010.590</td>
 </tr>
 <tr class="odd">
 <td align="right">2</td>
 <td align="right">1</td>
-<td align="right">2272.1713</td>
-<td align="right">1147.9194</td>
-<td align="right">26028.794</td>
+<td align="right">2343.3414</td>
+<td align="right">1217.2746</td>
+<td align="right">27667.517</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="right">2</td>
-<td align="right">1545.4256</td>
-<td align="right">1197.4588</td>
-<td align="right">24031.258</td>
+<td align="right">1505.6511</td>
+<td align="right">1199.5531</td>
+<td align="right">24115.765</td>
 </tr>
 <tr class="odd">
 <td align="right">2</td>
 <td align="right">3</td>
-<td align="right">1424.9759</td>
-<td align="right">1217.6627</td>
-<td align="right">22186.508</td>
+<td align="right">1387.6629</td>
+<td align="right">1219.2314</td>
+<td align="right">22254.241</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="right">4</td>
-<td align="right">1193.4731</td>
-<td align="right">2242.8248</td>
-<td align="right">18350.814</td>
+<td align="right">1162.2201</td>
+<td align="right">2245.7107</td>
+<td align="right">18407.215</td>
 </tr>
 <tr class="odd">
 <td align="right">2</td>
 <td align="right">5</td>
-<td align="right">916.5634</td>
-<td align="right">1337.6132</td>
-<td align="right">15679.611</td>
+<td align="right">892.5762</td>
+<td align="right">1339.3560</td>
+<td align="right">15725.222</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="right">6</td>
-<td align="right">710.3869</td>
-<td align="right">976.7055</td>
-<td align="right">11994.066</td>
+<td align="right">691.7044</td>
+<td align="right">977.8493</td>
+<td align="right">12027.626</td>
 </tr>
 </tbody>
 </table>
@@ -1184,7 +1191,7 @@ this.</p>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">mean_absolute_percentage_error</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mape</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.04315227</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.05386989</span></span></code></pre></div>
 <p>The mean absolute error (mae) can also be calculated:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mae</span> <span class="op">&lt;-</span> <span class="va">observed_incompletes</span> <span class="op">|&gt;</span> </span>
@@ -1207,9 +1214,9 @@ this.</p>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">mean_absolute_error</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mae</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 566.6337</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 766.6082</span></span></code></pre></div>
 <p>The mean absolute percentage error for the modelled parameters is
-4.3% and the mean absolute error is 566.6.</p>
+5.4% and the mean absolute error is 766.6.</p>
 </div>
 <div class="section level2">
 <h2 id="future-scenarios">Future scenarios<a class="anchor" aria-label="anchor" href="#future-scenarios"></a>
@@ -1533,61 +1540,61 @@ each other.</p>
 <tr class="odd">
 <td align="right">20</td>
 <td align="right">0</td>
-<td align="right">26234.905</td>
+<td align="right">27807.619</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="even">
 <td align="right">20</td>
 <td align="right">1</td>
-<td align="right">26899.093</td>
+<td align="right">26942.703</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="odd">
 <td align="right">20</td>
 <td align="right">2</td>
-<td align="right">23443.511</td>
+<td align="right">23471.535</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="even">
 <td align="right">20</td>
 <td align="right">3</td>
-<td align="right">20537.990</td>
+<td align="right">20562.509</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="odd">
 <td align="right">20</td>
 <td align="right">4</td>
-<td align="right">16194.249</td>
+<td align="right">16213.826</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="even">
 <td align="right">20</td>
 <td align="right">5</td>
-<td align="right">15545.392</td>
+<td align="right">15562.287</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="odd">
 <td align="right">20</td>
 <td align="right">6</td>
-<td align="right">12512.927</td>
+<td align="right">12526.705</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="even">
 <td align="right">20</td>
 <td align="right">7</td>
-<td align="right">11257.900</td>
+<td align="right">11270.479</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="odd">
 <td align="right">20</td>
 <td align="right">8</td>
-<td align="right">8713.800</td>
+<td align="right">8724.919</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="even">
 <td align="right">20</td>
 <td align="right">9</td>
-<td align="right">8953.365</td>
+<td align="right">8966.015</td>
 <td align="left">Scenario 1</td>
 </tr>
 </tbody>

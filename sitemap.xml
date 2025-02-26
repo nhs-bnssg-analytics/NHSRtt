@@ -8,6 +8,7 @@
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/index.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/news/index.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/NHSRtt.html</loc></url>
+<url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/apply_parameter_skew.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/apply_params_to_projections.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/calculate_incompletes.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/calculate_timestep_transitions.html</loc></url>
@@ -16,6 +17,7 @@
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/create_dummy_data.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/get_rtt_data.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/index.html</loc></url>
+<url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/latest_rtt_date.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/month_attribution_lkp.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/obtain_links.html</loc></url>
 <url><loc>https://nhs-bnssg-analytics.github.io/NHSRtt/reference/optimise_capacity.html</loc></url>
