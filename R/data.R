@@ -1,25 +1,18 @@
 #' Returns the date of the latest available data
 #'
 #' @inheritParams get_rtt_data
-#' @importFrom utils head
-#'
+#' @importFrom lubridate ceiling_date
 #' @returns the latest date of available data
 #' @export
 #'
 #' @examples latest_rtt_date()
 latest_rtt_date <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/") {
-  annual_urls <- obtain_links(url) |>
-    (\(x) x[grepl("^[0-9]{4}-[0-9]{2}", names(x))])() |>
-    (\(x) x[!grepl("xls$", x)])() |>
-    head(1) |>
-    (\(x) obtain_links(x))() |>
-    (\(x) x[grepl("zip$", x)])() |>
-    head(1)
+  latest_file <- latest_rtt_file(url)
 
   latest_date <- as.Date(
     paste0(
       '01',
-      sub(".*?\\b([A-Za-z]{3}\\d{2}).*", "\\1", annual_urls)),
+      sub(".*?\\b([A-Za-z]{3}\\d{2}).*", "\\1", latest_file)),
     format = '%d%b%y'
   )
 
@@ -31,6 +24,78 @@ latest_rtt_date <- function(url = "https://www.england.nhs.uk/statistics/statist
   return(latest_date)
 }
 
+#' Returns the url for the latest available file
+#'
+#' @inheritParams get_rtt_data
+#' @importFrom utils head
+latest_rtt_file <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/") {
+  latest_file <- obtain_links(url) |>
+    (\(x) x[grepl("^[0-9]{4}-[0-9]{2}", names(x))])() |>
+    (\(x) x[!grepl("xls$", x)])() |>
+    head(1) |>
+    (\(x) obtain_links(x))() |>
+    (\(x) x[grepl("zip$", x)])() |>
+    head(1)
+
+  return(latest_file)
+}
+
+#' Returns a table of organisations and how they map to one another from the
+#' latest available RTT file
+#'
+#' @inheritParams get_rtt_data
+#' @importFrom dplyr distinct as_tibble
+#' @importFrom data.table fread
+#' @returns a tibble with fields for "NHS Region Code", "NHS Region Name",
+#'   "Provider", "Parent Org Code", "Provider Parent Name", "Provider Org Code",
+#'   "Provider Org Name", "Commissioner", "Parent Org Code", "Commissioner
+#'   Parent Name", "Commissioner Org Code",	"Commissioner Org Name"
+#' @export
+#'
+latest_orgs <- function(url = "https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/") {
+  latest_lkp <- latest_rtt_file(url) |>
+    download_unzip_files() |>
+    data.table::fread(
+      na.strings = ""
+    ) |>
+    chop_top_off_data() |>
+    make_period_field() |>
+    adjust_treatment_function_field_name() |>
+    dplyr::distinct(
+      .data$`Provider Parent Org Code`,
+      .data$`Provider Parent Name`,
+      .data$`Provider Org Code`,
+      .data$`Provider Org Name`,
+      .data$`Commissioner Parent Org Code`,
+      .data$`Commissioner Parent Name`,
+      .data$`Commissioner Org Code`,
+      .data$`Commissioner Org Name`
+    )
+
+  # get the lateset ICB to region lkp file from here:
+  # https://geoportal.statistics.gov.uk/datasets/ons::sub-icb-locations-to-integrated-care-boards-to-nhser-april-2024-lookup-in-en/about
+
+  icb_lkp <- data.table::fread(
+    "https://hub.arcgis.com/api/v3/datasets/cdd2e45c39e14e9eb8280789560f83a9_0/downloads/data?format=csv&spatialRefId=4326&where=1%3D1",
+    showProgress = FALSE
+  ) |>
+    dplyr::select(
+      "Provider Parent Org Code" = "ICB24CDH",
+      "NHS Region Code" = "NHSER24CDH",
+      "NHS Region Name" = "NHSER24NM"
+    )
+
+  latest_lkp <- latest_lkp |>
+    dplyr::left_join(
+      icb_lkp,
+      by = join_by(
+        `Provider Parent Org Code`
+      )
+    ) |>
+    dplyr::as_tibble()
+
+  return(latest_lkp)
+}
 
 #' Download and tidy the referral to treatment data from the NHS Statistics
 #' webpage

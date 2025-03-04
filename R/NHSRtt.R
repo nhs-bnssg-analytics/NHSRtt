@@ -8,5 +8,6 @@ utils::globalVariables(c(
   "months_waited_id",
   "period_id",
   "week_end",
-  ":="
+  ":=",
+  "Provider Parent Org Code"
 ))
