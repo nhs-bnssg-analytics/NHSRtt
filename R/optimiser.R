@@ -5,7 +5,8 @@
 #' @param referrals_projections numeric; a vector for the number of referrals
 #'   for each period in the projected time period
 #' @param target string length 1; can be either a percentage point change, eg,
-#'   "~-5\%" or a percent value, eg, "5\%"
+#'   "~-5\%" or a percent value, eg, "5\%". The value refers to the proportion
+#'   of patients waiting in the bins greater than or equal to the target_bin
 #' @param target_bin numeric length 1; the bin that the target refers to. It
 #'   must be less than or equal to the max_months_waited value
 #' @param capacity_profile string, one of "linear_change" or "flat"; determines

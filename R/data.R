@@ -117,9 +117,9 @@ latest_orgs <- function(url = "https://www.england.nhs.uk/statistics/statistical
 #' @examples
 #' \dontrun{
 #' monthly_rtt <- NHSRtt::get_rtt_data(
-#'   type = "complete",
 #'   date_start = as.Date("2024-10-01"),
 #'   date_end = as.Date("2024-11-01"),
+#'   trust_codes = c("RA7", "R0D"),
 #'   show_progress = TRUE
 #' )
 #' }
