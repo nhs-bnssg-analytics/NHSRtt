@@ -14,12 +14,13 @@ optimise_capacity(
   capacity_profile = "linear_change",
   surplus_treatment_redistribution_method = "evenly",
   tolerance,
-  max_iterations = 50
+  max_iterations = 50,
+  min_wl_size = 100
 )
 }
 \arguments{
 \item{t_1_capacity}{numeric; a single value for the capacity for the first
-time period}
+time period of the projected time period}
 
 \item{referrals_projections}{numeric; a vector for the number of referrals
 for each period in the projected time period}
@@ -37,16 +38,20 @@ renege_param, which are outputs from the function
 \code{calibrate_capacity_renege_params()}}
 
 \item{target}{string length 1; can be either a percentage point change, eg,
-"~-5\%" or a percent value, eg, "5\%"}
+"~-5\%" or a percent value, eg, "5\%". This refers to percentage of
+patients on the waiting list in the \code{target_bin} or higher waiting
+times. Note, this is the opposite of the NHS RTT targets, which are a
+proportion of patients on the waiting list that are below the
+\code{target_bin}}
 
 \item{target_bin}{numeric length 1; the bin that the target refers to. It
 must be less than or equal to the max_months_waited value}
 
 \item{capacity_profile}{string, one of "linear_change" or "flat"; determines
 how the capacity counts vary into the future. Linear change means that the
-first point is held stationary and the end point is varied, with a linear
-interpolation between the two points. Flat means that capacity remains
-constant into the future}
+first point is held stationary at the value of \code{t_1_capacity} and the
+end point is varied, with a linear interpolation between the two points.
+Flat means that capacity remains constant into the future}
 
 \item{surplus_treatment_redistribution_method}{string; one of "none",
 "evenly" or "prioritise_long_waiters"; should cases where the counts of
@@ -60,12 +65,28 @@ relative to the total waiting (even if a non-percentage target is used)}
 
 \item{max_iterations}{numeric; the maximum number of iterations to test for
 convergence before providing a warning and an invalid number}
+
+\item{min_wl_size}{numeric; the minimum allowable waiting list size which a
+convergence is acceptable. When waiting lists get too small (e.g., in the
+10s, convergence can occur by a quirk of small numbers).}
 }
 \value{
-a capacity multiplier representing the annual change in capacity
-  (from the input t_1_capacity to a capacity at t = 13) to achieve the
-  desired target within the target tolerance. The name of the returned object
-  provides an indication of whether the optimiser converged
+A capacity multiplier representing that is applied to the
+  \code{t_1_capacity} input to achieve the desired target by the end of the
+  projection period. Where the \code{capacity_profile} is 'linear_change',
+  this represent a linear growth in capacity from
+  \ifelse{html}{\out{t<sub>1</sub>}}{\eqn{t_1}} to
+  \ifelse{html}{\out{t<sub>13</sub>}}{\eqn{t_13}}, where
+  \ifelse{html}{\out{t<sub>1</sub>}}{\eqn{t_1}} is equal to
+  \code{t_1_capacity} and \ifelse{html}{\out{t<sub>13</sub>}}{\eqn{t_13}} is
+  \code{t_1_capacity} multiplied by the output of the function.
+
+  If \code{capacity_profile} is 'flat', then the projected capacity is simply
+  \code{t_1_capacity} multiplied by the output of the function for the whole
+  of the projected period.
+
+  The name of the returned object provides an indication of whether the
+  optimiser converged.
 }
 \description{
 Optimise the capacity profile for projections
