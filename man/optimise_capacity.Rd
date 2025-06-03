@@ -14,8 +14,7 @@ optimise_capacity(
   capacity_profile = "linear_change",
   surplus_treatment_redistribution_method = "evenly",
   tolerance,
-  max_iterations = 50,
-  min_wl_size = 100
+  max_iterations = 50
 )
 }
 \arguments{
@@ -65,10 +64,6 @@ relative to the total waiting (even if a non-percentage target is used)}
 
 \item{max_iterations}{numeric; the maximum number of iterations to test for
 convergence before providing a warning and an invalid number}
-
-\item{min_wl_size}{numeric; the minimum allowable waiting list size which a
-convergence is acceptable. When waiting lists get too small (e.g., in the
-10s, convergence can occur by a quirk of small numbers).}
 }
 \value{
 A capacity multiplier representing that is applied to the

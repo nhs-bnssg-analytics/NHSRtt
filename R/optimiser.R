@@ -23,9 +23,6 @@
 #'   relative to the total waiting (even if a non-percentage target is used)
 #' @param max_iterations numeric; the maximum number of iterations to test for
 #'   convergence before providing a warning and an invalid number
-#' @param min_wl_size numeric; the minimum allowable waiting list size which a
-#'   convergence is acceptable. When waiting lists get too small (e.g., in the
-#'   10s, convergence can occur by a quirk of small numbers).
 #' @inheritParams apply_params_to_projections
 #'
 #' @importFrom dplyr setdiff mutate case_when summarise filter pull between
