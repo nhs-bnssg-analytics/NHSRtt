@@ -1,18 +1,22 @@
 #' Optimise the capacity profile for projections
 #'
 #' @param t_1_capacity numeric; a single value for the capacity for the first
-#'   time period
+#'   time period of the projected time period
 #' @param referrals_projections numeric; a vector for the number of referrals
 #'   for each period in the projected time period
 #' @param target string length 1; can be either a percentage point change, eg,
-#'   "~-5\%" or a percent value, eg, "5\%"
+#'   "~-5\%" or a percent value, eg, "5\%". This refers to percentage of
+#'   patients on the waiting list in the \code{target_bin} or higher waiting
+#'   times. Note, this is the opposite of the NHS RTT targets, which are a
+#'   proportion of patients on the waiting list that are below the
+#'   \code{target_bin}
 #' @param target_bin numeric length 1; the bin that the target refers to. It
 #'   must be less than or equal to the max_months_waited value
 #' @param capacity_profile string, one of "linear_change" or "flat"; determines
 #'   how the capacity counts vary into the future. Linear change means that the
-#'   first point is held stationary and the end point is varied, with a linear
-#'   interpolation between the two points. Flat means that capacity remains
-#'   constant into the future
+#'   first point is held stationary at the value of \code{t_1_capacity} and the
+#'   end point is varied, with a linear interpolation between the two points.
+#'   Flat means that capacity remains constant into the future
 #' @param tolerance numeric length 1; the tolerance used to compare the absolute
 #'   error with in the max_months_waited bin to determine convergence. The
 #'   absolute error is calculated on the proportion in the max_months_waited bin
@@ -25,10 +29,22 @@
 #' @importFrom stats lm predict
 #' @importFrom rlang .data
 #'
-#' @returns a capacity multiplier representing the annual change in capacity
-#'   (from the input t_1_capacity to a capacity at t = 13) to achieve the
-#'   desired target within the target tolerance. The name of the returned object
-#'   provides an indication of whether the optimiser converged
+#' @returns A capacity multiplier representing that is applied to the
+#'   \code{t_1_capacity} input to achieve the desired target by the end of the
+#'   projection period. Where the \code{capacity_profile} is 'linear_change',
+#'   this represent a linear growth in capacity from
+#'   \ifelse{html}{\out{t<sub>1</sub>}}{\eqn{t_1}} to
+#'   \ifelse{html}{\out{t<sub>13</sub>}}{\eqn{t_13}}, where
+#'   \ifelse{html}{\out{t<sub>1</sub>}}{\eqn{t_1}} is equal to
+#'   \code{t_1_capacity} and \ifelse{html}{\out{t<sub>13</sub>}}{\eqn{t_13}} is
+#'   \code{t_1_capacity} multiplied by the output of the function.
+#'
+#'   If \code{capacity_profile} is 'flat', then the projected capacity is simply
+#'   \code{t_1_capacity} multiplied by the output of the function for the whole
+#'   of the projected period.
+#'
+#'   The name of the returned object provides an indication of whether the
+#'   optimiser converged.
 #' @export
 #'
 optimise_capacity <- function(t_1_capacity, referrals_projections,
@@ -154,7 +170,7 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   # set target_val to 100% if over 100%
   if (target_val > 1) target_val <- 1
 
-  change_proportion <- 1
+  change_proportion <- 1 # this controls the size of the adjustment for each iteration
   converged <- FALSE
   iteration <- 1
   last_iteration_proportion <- NA
@@ -224,7 +240,9 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
         .by = "months_waited_id"
       )
 
-    if (sum(proportion_at_highest_bin[["incompletes"]]) == 0) {
+    wl_size <- sum(proportion_at_highest_bin[["incompletes"]])
+
+    if (wl_size == 0) {
       # this part of statement means the total on the waiting list is zero
       proportion_at_highest_bin <- 0
       min_change_proportion <- min(min_change_proportion, change_proportion)
@@ -306,6 +324,19 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
         change_proportion <- change_proportion - adjustment
       }
     }
+
+    # FOR DEBUGGING
+    # cat(
+    #   paste(
+    #     paste("Iteration:", iteration - 1),
+    #     paste("Performance:", paste0(formatC(100 * proportion_at_highest_bin, format = "f", digits = 1), "%")),
+    #     paste("WL size:", round(wl_size, 2)),
+    #     paste("Next change proportion:", round(change_proportion, 3)),
+    #     "\n"
+    #   )
+    # )
+
+
   }
 
   return(change_proportion)
