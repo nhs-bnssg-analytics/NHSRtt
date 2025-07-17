@@ -58,7 +58,6 @@ webpage
 \examples{
 \dontrun{
 monthly_rtt <- NHSRtt::get_rtt_data(
-  type = "complete",
   date_start = as.Date("2024-10-01"),
   date_end = as.Date("2024-11-01"),
   show_progress = TRUE
