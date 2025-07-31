@@ -272,13 +272,23 @@ find_p <- function(
   percentile = 0.92,
   max_iterations = 15
 ) {
+  # check p1_lower less than p1_upper
+  if (p1_lower > p1_upper) {
+    stop("p1_lower must be less than p1_upper")
+  }
+
+  # check p1_lower and p1_upper between 0 and 1
+  if (!(all(between(p1_lower, 0, 1), between(p1_upper, 0, 1)))) {
+    stop("p1_lower and p1_upper need to be between 0 and 1")
+  }
+
   max_num_months <- length(renege_params)
 
   iter_count <- 0
   time_p <- 1e12 # dummy number so the while loop can commence
   # Use binary search to find the value of p1 that achieves the target_time
   # at the desired percentile
-  while (abs(time_p - target_time) > tolerance & iter_count <= max_iterations) {
+  while (abs(time_p - target_time) > tolerance & iter_count < max_iterations) {
     iter_count <- iter_count + 1
 
     p1_mid <- (p1_lower + p1_upper) / 2 # Calculate midpoint of current p1

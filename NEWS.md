@@ -1,3 +1,7 @@
+# NHSRtt 0.2.4
+
+* steady state calculation available using the `find_p()` function
+
 # NHSRtt 0.2.3
 
 * includes latest_orgs() function

@@ -219,3 +219,95 @@ test_that("No error if required columns exist and time starts at 0", {
   df <- data.frame(months_waited_id = 0:4, wlsize = c(10, 20, 30, 40, 50))
   expect_silent(hist_percentile_calc(df))
 })
+
+# find_p
+test_that("Returns valid result for typical input", {
+  result <- find_p(
+    target_time = 18 / 4.35,
+    renege_params = c(0.04, 0.04, 0.03, 0.01, 0.02, 0.02, 0.01),
+    mu_1 = 2651.227,
+    referrals = 12000,
+    tolerance = 0.001,
+    max_iterations = 20
+  )
+
+  expect_type(result, "list")
+  expect_true(!is.na(result$p1))
+  expect_true(!is.na(result$time_p))
+  expect_true(result$niterations <= 20)
+  expect_true(is.data.frame(result$waiting_list))
+  expect_type(result$mu, "double")
+  expect_type(result$wlsize, "double")
+})
+
+test_that("Returns NA if solution not found within max_iterations", {
+  result <- find_p(
+    target_time = 1e6, # unrealistic target
+    renege_params = rep(0.01, 7),
+    mu_1 = 1000,
+    referrals = 5000,
+    tolerance = 0.0001,
+    max_iterations = 3
+  )
+
+  expect_true(is.na(result$p1))
+  expect_true(is.na(result$time_p))
+  expect_equal(result$niterations, 3)
+})
+
+
+test_that("Returns expected structure", {
+  result <- find_p(
+    target_time = 18 / 4.35,
+    renege_params = rep(0.02, 7),
+    mu_1 = 2000,
+    referrals = 10000
+  )
+
+  expect_named(
+    result,
+    c("p1", "time_p", "mu", "wlsize", "waiting_list", "niterations")
+  )
+})
+
+test_that("Error if p1_lower > p1_upper", {
+  expect_error(
+    find_p(
+      target_time = 18 / 4.35,
+      renege_params = rep(0.02, 7),
+      mu_1 = 2000,
+      referrals = 10000,
+      p1_lower = 0.8,
+      p1_upper = 0.2
+    ),
+    "p1_lower must be less than p1_upper"
+  )
+})
+
+test_that("Error if p1_lower is outside [0, 1]", {
+  expect_error(
+    find_p(
+      target_time = 18 / 4.35,
+      renege_params = rep(0.02, 7),
+      mu_1 = 2000,
+      referrals = 10000,
+      p1_lower = -0.1,
+      p1_upper = 0.5
+    ),
+    "p1_lower and p1_upper need to be between 0 and 1"
+  )
+})
+
+test_that("Error if p1_upper is outside [0, 1]", {
+  expect_error(
+    find_p(
+      target_time = 18 / 4.35,
+      renege_params = rep(0.02, 7),
+      mu_1 = 2000,
+      referrals = 10000,
+      p1_lower = 0.2,
+      p1_upper = 1.5
+    ),
+    "p1_lower and p1_upper need to be between 0 and 1"
+  )
+})
