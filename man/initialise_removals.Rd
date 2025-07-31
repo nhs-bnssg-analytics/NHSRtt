@@ -30,11 +30,11 @@ Constructs a data frame representing the configuration of removals,
   including time, renge rates, and potential services.
 }
 \examples{
-# Example usage:
+\dontrun{
 set.seed(123)
 renege_params <- runif(24)
 initialise_removals(renege_params, p1 = 0.5, mu = 50)
-
+}
 }
 \seealso{
 \code{\link{geom_fn_s}}

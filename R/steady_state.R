@@ -11,11 +11,13 @@
 #' @return A numeric vector of survival probabilities for each month.
 #'
 #' @examples
+#' \dontrun{
 #' # Calculate the geometric survival probabilities for p1 = 0.2, up to 24 months
 #' geom_fn_s(p1 = 0.2, max_num_months = 24)
 #'
 #' # Calculate for a single month
 #' geom_fn_s(p1 = 0.7, max_num_months = 1)
+#' }
 #'
 geom_fn_s <- function(p1, max_num_months = 24) {
   if (max_num_months > 24 | max_num_months < 1) {
@@ -54,11 +56,12 @@ geom_fn_s <- function(p1, max_num_months = 24) {
 #' @seealso \code{\link{geom_fn_s}}
 #'
 #' @examples
-#' # Example usage:
+#' \dontrun{
+# Example usage:
 #' set.seed(123)
 #' renege_params <- runif(24)
 #' initialise_removals(renege_params, p1 = 0.5, mu = 50)
-#'
+#' }
 initialise_removals <- function(renege_params, p1, mu) {
   capacity <- c(mu, rep(0, length(renege_params) - 1))
   s_distribution <- geom_fn_s(p1, max_num_months = length(renege_params))
@@ -94,8 +97,10 @@ initialise_removals <- function(renege_params, p1, mu) {
 #'   \code{sigma} is set to the floored value of the previous size after removal.
 #'
 #' @examples
+#' \dontrun{
 #' wl_removals <- data.frame(r = c(0.1, 0.2), service = c(5, 3))
 #' calc_wl_sizes(wl_removals, referrals = 50)
+#' }
 calc_wl_sizes <- function(wl_removals, referrals) {
   # sigma is the number of people actually serviced (treated)
   wl_removals$sigma <- 0
@@ -135,10 +140,13 @@ calc_wl_sizes <- function(wl_removals, referrals) {
 #' and determines the time at which the cumulative sum first meets or exceeds the specified percentile
 #' of the total sum. If the percentile falls within a bin, linear interpolation is used to estimate the precise time.
 #'
+#' @importFrom rlang .data
+#' @importFrom dplyr mutate filter slice
 #' @examples
+#' \dontrun{
 #' wl_structure <- data.frame(time = 1:10, wlsize = c(5, 3, 8, 2, 7, 4, 6, 1, 9, 2))
 #' hist_percentile_calc(wl_structure, percentile = 0.9)
-#'
+#' }
 #' @importFrom dplyr arrange mutate slice filter
 hist_percentile_calc <- function(
   wl_structure,
@@ -174,7 +182,7 @@ hist_percentile_calc <- function(
   wl_structure <- wl_structure |>
     mutate(cum_wlsize = cumsum(.data[[wlsize_col]]))
   row_p <- wl_structure |>
-    filter(cum_wlsize >= p_cut) |>
+    filter(.data$cum_wlsize >= p_cut) |>
     slice(1)
 
   needed_in_row <- p_cut - (row_p$cum_wlsize - row_p[[wlsize_col]])
@@ -214,15 +222,21 @@ hist_percentile_calc <- function(
 #'   Must be between 0 and 1 and more than  \code{p1_lower}. Defaults to 0.85.
 #' @param tolerance numeric of length 1; tolerance for the binary search stopping
 #'   criterion. The unit is weeks.
+#' @param max_iterations numeric of length 1; maximum number of iterations to
+#'   search for a valid result
 #' @inheritParams geom_fn_s
 #' @inheritParams calc_wl_sizes
 #' @inheritParams hist_percentile_calc
+#' @inheritParams initialise_removals
 #'
 #' @return A list containing: \item{p1}{The value of \code{p1} found to achieve
 #'   the target waiting time.} \item{time_p}{The interpolated waiting time at
-#'   the specified percentile.} \item{df}{The data frame with historical data
+#'   the specified percentile.} \item{mu}{The total number of treatments required
+#'   when the solution is found.} \item{wlsize}{The total size of the waiting list
+#'   when the solution is found.} \item{waiting_list}{The data frame with historical data
 #'   formatted and waiting list sizes calculated.} \item{niterations}{The number
-#'   of iterations performed in the binary search.}
+#'   of iterations performed in the binary search.} Where there are NAs included
+#'   in the results, this indicates that a solution couldn't be found.
 #'
 #' @details The function repeatedly uses the removals table (from \code{initialise_removals()})
 #'   and calculates waiting list sizes for candidate values of \code{p1}, using binary search to
@@ -234,6 +248,17 @@ hist_percentile_calc <- function(
 #' @seealso \code{\link{initialise_removals}}, \code{\link{calc_wl_sizes}},
 #'   \code{\link{hist_percentile_calc}}
 #'
+#' @examples
+#' find_p(
+#'   target_time = 18 / 4.35,
+#'   renege_params = c(0.04, 0.04, 0.03, 0.01, 0.02, 0.02, 0.01),
+#'   mu_1 = 2651.227,
+#'   p1_lower = 0.1,
+#'   p1_upper = 0.85,
+#'   tolerance = 0.001,
+#'   referrals = 12000,
+#'   percentile = 0.92
+#' )
 #' @export
 #'
 find_p <- function(
@@ -244,15 +269,18 @@ find_p <- function(
   p1_upper = 0.85,
   tolerance = 0.001,
   referrals,
-  percentile = 0.92
+  percentile = 0.92,
+  max_iterations = 15
 ) {
   max_num_months <- length(renege_params)
 
   iter_count <- 0
+  time_p <- 1e12 # dummy number so the while loop can commence
   # Use binary search to find the value of p1 that achieves the target_time
   # at the desired percentile
-  while ((p1_upper - p1_lower) > tolerance) {
+  while (abs(time_p - target_time) > tolerance & iter_count <= max_iterations) {
     iter_count <- iter_count + 1
+
     p1_mid <- (p1_lower + p1_upper) / 2 # Calculate midpoint of current p1
     # Format the historical data with current p1
     removals_table <- initialise_removals(
@@ -282,6 +310,8 @@ find_p <- function(
       return(list(
         p1 = p1_mid,
         time_p = time_p,
+        mu = sum(waiting_list$sigma),
+        wlsize = sum(waiting_list$wlsize),
         waiting_list = waiting_list,
         niterations = iter_count
       ))
@@ -295,22 +325,18 @@ find_p <- function(
   }
   # After exiting the loop, return the closest found p1 and corresponding
   # time_p
-  p1_mid <- (p1_lower + p1_upper) / 2
   removals_table <- initialise_removals(
     renege_params = renege_params,
     p1 = p1_mid,
     mu = mu_1 / (1 - p1_mid)
   )
   waiting_list <- calc_wl_sizes(removals_table, referrals)
-  time_p <- hist_percentile_calc(
-    waiting_list,
-    percentile = 0.92,
-    wlsize_col = "wlsize",
-    time_col = "months_waited_id"
-  )
+
   return(list(
-    p1 = p1_mid,
-    time_p = time_p,
+    p1 = NA,
+    time_p = NA,
+    mu = NA,
+    wlsize = NA,
     waiting_list = waiting_list,
     niterations = iter_count
   ))

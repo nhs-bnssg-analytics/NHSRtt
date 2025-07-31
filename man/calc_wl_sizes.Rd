@@ -32,6 +32,8 @@ For each row in \code{wl_removals}, the function computes the new waiting
   \code{sigma} is set to the floored value of the previous size after removal.
 }
 \examples{
+\dontrun{
 wl_removals <- data.frame(r = c(0.1, 0.2), service = c(5, 3))
 calc_wl_sizes(wl_removals, referrals = 50)
+}
 }

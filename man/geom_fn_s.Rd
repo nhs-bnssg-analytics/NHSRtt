@@ -21,10 +21,12 @@ Computes the survival probabilities for a geometric distribution over a
 specified number of months.
 }
 \examples{
+\dontrun{
 # Calculate the geometric survival probabilities for p1 = 0.2, up to 24 months
 geom_fn_s(p1 = 0.2, max_num_months = 24)
 
 # Calculate for a single month
 geom_fn_s(p1 = 0.7, max_num_months = 1)
+}
 
 }

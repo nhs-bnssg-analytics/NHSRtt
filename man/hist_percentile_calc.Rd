@@ -35,7 +35,8 @@ and determines the time at which the cumulative sum first meets or exceeds the s
 of the total sum. If the percentile falls within a bin, linear interpolation is used to estimate the precise time.
 }
 \examples{
+\dontrun{
 wl_structure <- data.frame(time = 1:10, wlsize = c(5, 3, 8, 2, 7, 4, 6, 1, 9, 2))
 hist_percentile_calc(wl_structure, percentile = 0.9)
-
+}
 }
