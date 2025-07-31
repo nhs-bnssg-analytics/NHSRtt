@@ -8,7 +8,7 @@ Authors@R: c(
     person("Richard", "Wood", role = "aut",
            comment = c(ORCID = "0000-0002-3476-395X ")),
     person("Richard", "Blackwell", role = "aut"),
-    person("Simon", "Wellesley-Miller", role = "aut"),,
+    person("Simon", "Wellesley-Miller", role = "aut"),
     person("Neil", "Walton", role = "aut")
   )
 Description: Using published (or local) data for counts of completed pathways, 
