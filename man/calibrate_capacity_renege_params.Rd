@@ -11,7 +11,8 @@ calibrate_capacity_renege_params(
   completes,
   max_months_waited = 12,
   redistribute_m0_reneges,
-  full_breakdown = FALSE
+  full_breakdown = FALSE,
+  allow_negative_params
 )
 }
 \arguments{
@@ -36,6 +37,15 @@ zero months waited stock be reassigned to referrals?}
 \item{full_breakdown}{logical; include a full breakdown of monthly
 transitions by period. FALSE provides the parameters by months_waited_id
 only}
+
+\item{allow_negative_params}{logical; data issues can result in negative
+renege or capacity parameters. These would result in the opposite effect
+occurring (eg, individuals entering the pathway rather than being removed).
+In some cases, this can be legitimate (like an inter-provider transfer
+leading to patients entering a pathway with no accompanying clock start) but
+in many cases (particularly smaller specialties) these are mainly a result
+of data system issues leading to insufficient clock starts, and forcing the
+parameters to zero then allows sensible subsequent calculations}
 }
 \description{
 calculate the capacity and renege parameters over the period of data per
@@ -65,6 +75,7 @@ params <- calibrate_capacity_renege_params(
   incompletes = incomp,
   completes = comp,
   max_months_waited = max_months,
-  redistribute_m0_reneges = TRUE
+  redistribute_m0_reneges = TRUE,
+  allow_negative_params = FALSE
 )
 }
