@@ -250,7 +250,7 @@ hist_percentile_calc <- function(
 #'
 #' @examples
 #' find_p(
-#'   target_time = 18 / 4.35,
+#'   target_time = 18 / (4 + (68 / 487)),
 #'   renege_params = c(0.04, 0.04, 0.03, 0.01, 0.02, 0.02, 0.01),
 #'   mu_1 = 2651.227,
 #'   p1_lower = 0.1,
@@ -262,7 +262,7 @@ hist_percentile_calc <- function(
 #' @export
 #'
 find_p <- function(
-  target_time = 18 / 4.35,
+  target_time = 18 / (4 + (68 / 487)),
   renege_params,
   mu_1,
   p1_lower = 0.1,
