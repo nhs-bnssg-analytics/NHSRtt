@@ -18,7 +18,7 @@ find_p(
 }
 \arguments{
 \item{target_time}{numeric of length 1; the target waiting time,
-in weeks, to achieve the specified percentile.}
+in months, to achieve the specified percentile.}
 
 \item{renege_params}{numeric; proportion \ifelse{html}{\out{(0 &le; r<sub>m</sub> &leq; 1)}}{\eqn{(0 \leq r_m \leq 1)}}
 of waiting patients reneging in the m-th month of waiting, where \ifelse{html}{\out{r<sub>2</sub>}}{\eqn{r_2}} = 0.1
@@ -33,7 +33,7 @@ Must be between 0 and 1 and less than  \code{p1_upper}. Defaults to 0.1.}
 Must be between 0 and 1 and more than  \code{p1_lower}. Defaults to 0.85.}
 
 \item{tolerance}{numeric of length 1; tolerance for the binary search stopping
-criterion. The unit is weeks.}
+criterion. The unit is months.}
 
 \item{referrals}{numeric of length 1; value representing the steady-state number
 of referrals.}

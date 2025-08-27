@@ -214,14 +214,14 @@ hist_percentile_calc <- function(
 #' (\code{mu_1}) and other parameters.
 #'
 #' @param target_time numeric of length 1; the target waiting time,
-#'    in weeks, to achieve the specified percentile.
+#'    in months, to achieve the specified percentile.
 #' @param mu_1 numeric of length 1; treatment capacity in the first month.
 #' @param p1_lower numeric of length 1; lower bound for the binary search of \code{p1}.
 #'   Must be between 0 and 1 and less than  \code{p1_upper}. Defaults to 0.1.
 #' @param p1_upper numeric of length 1; upper bound for the binary search of \code{p1}.
 #'   Must be between 0 and 1 and more than  \code{p1_lower}. Defaults to 0.85.
 #' @param tolerance numeric of length 1; tolerance for the binary search stopping
-#'   criterion. The unit is weeks.
+#'   criterion. The unit is months.
 #' @param max_iterations numeric of length 1; maximum number of iterations to
 #'   search for a valid result
 #' @inheritParams geom_fn_s
