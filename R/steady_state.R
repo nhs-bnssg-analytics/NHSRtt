@@ -235,8 +235,8 @@ hist_percentile_calc <- function(
 #'   when the solution is found.} \item{wlsize}{The total size of the waiting list
 #'   when the solution is found.} \item{waiting_list}{The data frame with historical data
 #'   formatted and waiting list sizes calculated.} \item{niterations}{The number
-#'   of iterations performed in the binary search.} Where there are NAs included
-#'   in the results, this indicates that a solution couldn't be found.
+#'   of iterations performed in the binary search.} \item{status}{Converged indicates a
+#'   solution was found, and Not converged indicates no solution was found}
 #'
 #' @details The function repeatedly uses the removals table (from \code{initialise_removals()})
 #'   and calculates waiting list sizes for candidate values of \code{p1}, using binary search to
@@ -250,7 +250,7 @@ hist_percentile_calc <- function(
 #'
 #' @examples
 #' find_p(
-#'   target_time = 18 / (4 + (68 / 487)),
+#'   target_time = 4 + (68 / 487),
 #'   renege_params = c(0.04, 0.04, 0.03, 0.01, 0.02, 0.02, 0.01),
 #'   mu_1 = 2651.227,
 #'   p1_lower = 0.1,
@@ -262,7 +262,7 @@ hist_percentile_calc <- function(
 #' @export
 #'
 find_p <- function(
-  target_time = 18 / (4 + (68 / 487)),
+  target_time = 4 + (68 / 487),
   renege_params,
   mu_1,
   p1_lower = 0.1,
@@ -288,7 +288,10 @@ find_p <- function(
   time_p <- 1e12 # dummy number so the while loop can commence
   # Use binary search to find the value of p1 that achieves the target_time
   # at the desired percentile
-  while (abs(time_p - target_time) > tolerance & iter_count < max_iterations) {
+  while (
+    abs(time_p - target_time) > tolerance &
+      iter_count < max_iterations
+  ) {
     iter_count <- iter_count + 1
 
     p1_mid <- (p1_lower + p1_upper) / 2 # Calculate midpoint of current p1
@@ -323,7 +326,8 @@ find_p <- function(
         mu = sum(waiting_list$sigma),
         wlsize = sum(waiting_list$wlsize),
         waiting_list = waiting_list,
-        niterations = iter_count
+        niterations = iter_count,
+        status = "Converged"
       ))
     } else if (time_p > target_time) {
       # If the time is too high, increase p1_lower to search higher p1
@@ -342,12 +346,22 @@ find_p <- function(
   )
   waiting_list <- calc_wl_sizes(removals_table, referrals)
 
+  # Calculate the interpolated time at which the desired percentile of
+  # cumulative wlsize is reached
+  time_p <- hist_percentile_calc(
+    waiting_list,
+    percentile = percentile,
+    wlsize_col = "wlsize",
+    time_col = "months_waited_id"
+  )
+
   return(list(
-    p1 = NA,
-    time_p = NA,
-    mu = NA,
-    wlsize = NA,
+    p1 = p1_mid,
+    time_p = time_p,
+    mu = sum(waiting_list$sigma),
+    wlsize = sum(waiting_list$wlsize),
     waiting_list = waiting_list,
-    niterations = iter_count
+    niterations = iter_count,
+    status = "Not converged"
   ))
 }

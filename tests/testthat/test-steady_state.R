@@ -240,7 +240,7 @@ test_that("Returns valid result for typical input", {
   expect_type(result$wlsize, "double")
 })
 
-test_that("Returns NA if solution not found within max_iterations", {
+test_that("Returns 'Not converged' if solution not found within max_iterations", {
   result <- find_p(
     target_time = 1e6, # unrealistic target
     renege_params = rep(0.01, 7),
@@ -250,8 +250,10 @@ test_that("Returns NA if solution not found within max_iterations", {
     max_iterations = 3
   )
 
-  expect_true(is.na(result$p1))
-  expect_true(is.na(result$time_p))
+  expect_equal(
+    result$status,
+    "Not converged"
+  )
   expect_equal(result$niterations, 3)
 })
 
@@ -266,7 +268,7 @@ test_that("Returns expected structure", {
 
   expect_named(
     result,
-    c("p1", "time_p", "mu", "wlsize", "waiting_list", "niterations")
+    c("p1", "time_p", "mu", "wlsize", "waiting_list", "niterations", "status")
   )
 })
 
