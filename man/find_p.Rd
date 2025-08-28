@@ -5,7 +5,7 @@
 \title{Find the value of p1 that achieves a target waiting time percentile}
 \usage{
 find_p(
-  target_time = 18/4.35,
+  target_time = 4 + (68/487),
   renege_params,
   mu_1,
   p1_lower = 0.1,
@@ -50,8 +50,8 @@ A list containing: \item{p1}{The value of \code{p1} found to achieve
   when the solution is found.} \item{wlsize}{The total size of the waiting list
   when the solution is found.} \item{waiting_list}{The data frame with historical data
   formatted and waiting list sizes calculated.} \item{niterations}{The number
-  of iterations performed in the binary search.} Where there are NAs included
-  in the results, this indicates that a solution couldn't be found.
+  of iterations performed in the binary search.} \item{status}{Converged indicates a
+  solution was found, and Not converged indicates no solution was found}
 }
 \description{
 Uses a binary search algorithm to find the value of \code{p1} (the proportion
@@ -70,7 +70,7 @@ The function repeatedly uses the removals table (from \code{initialise_removals(
 }
 \examples{
 find_p(
-  target_time = 18 / 4.35,
+  target_time = 4 + (68 / 487),
   renege_params = c(0.04, 0.04, 0.03, 0.01, 0.02, 0.02, 0.01),
   mu_1 = 2651.227,
   p1_lower = 0.1,

@@ -24,12 +24,12 @@ geom_fn_s <- function(p1, max_num_months = 24) {
     stop("max_num_months must be between 1 and 24")
   }
 
-  probs_24_month <- stats::dgeom(0:23, prob = 1 - p1)
+  probs_24_month <- stats::dgeom(0:24, prob = 1 - p1)
 
   # aggregate top compartment
   probs <- c(
     probs_24_month[seq_len(max_num_months - 1)],
-    sum(probs_24_month[max_num_months:24])
+    sum(probs_24_month[max_num_months:25])
   )
   return(probs)
 }
@@ -68,7 +68,8 @@ initialise_removals <- function(renege_params, p1, mu) {
   wl_removals <- data.frame(
     months_waited_id = seq_along(renege_params) - 1,
     r = renege_params,
-    service = round(s_distribution * mu)
+    # service = round(s_distribution * mu)
+    service = s_distribution * mu
   )
   return(wl_removals)
 }
@@ -108,13 +109,15 @@ calc_wl_sizes <- function(wl_removals, referrals) {
 
   for (i in 1:nrow(wl_removals)) {
     prev_wlsize <- if (i == 1) referrals else wl_removals$wlsize[i - 1]
-    val <- floor(prev_wlsize * (1 - wl_removals$r[i]) - wl_removals$service[i])
+    # val <- floor(prev_wlsize * (1 - wl_removals$r[i]) - wl_removals$service[i])
+    val <- prev_wlsize * (1 - wl_removals$r[i]) - wl_removals$service[i]
     if (val > 0) {
       wl_removals$wlsize[i] <- val
       wl_removals$sigma[i] <- wl_removals$service[i]
     } else {
       wl_removals$wlsize[i] <- 0
-      wl_removals$sigma[i] <- floor(prev_wlsize * (1 - wl_removals$r[i]))
+      # wl_removals$sigma[i] <- floor(prev_wlsize * (1 - wl_removals$r[i]))
+      wl_removals$sigma[i] <- prev_wlsize * (1 - wl_removals$r[i])
     }
   }
   return(wl_removals)
