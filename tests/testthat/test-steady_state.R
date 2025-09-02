@@ -313,3 +313,193 @@ test_that("Error if p1_upper is outside [0, 1]", {
     "p1_lower and p1_upper need to be between 0 and 1"
   )
 })
+
+test_that("Error if negative renege parameters", {
+  expect_error(
+    find_p(
+      target_time = 18,
+      renege_params = c(0, -0.01, 0.2, 0.1),
+      mu_1 = 2000,
+      referrals = 2500
+    ),
+    "All renege_params must be greater or equal to 0"
+  )
+})
+
+
+# testing optimise_steady_state_mu ---------------------------------------
+
+test_that("Function returns a converged solution within tolerance", {
+  renege_params <- c(
+    0,
+    0,
+    0.130609994893718,
+    0.170839597237991,
+    0.0816899205064605,
+    0.184743485054583,
+    0.212512806928513,
+    0.145062630281234,
+    0.0887476040042307,
+    0.0866681597837429,
+    0.0962470429106841,
+    0.122065490059333,
+    0.298600354859636
+  )
+  tt <- 1000
+  result <- optimise_steady_state_mu(
+    referrals = 1280,
+    target_treatments = tt,
+    renege_params = renege_params
+  )
+
+  expect_type(result, "list")
+  expect_equal(result$status, "Converged")
+  expect_equal(result$method, "Within tolerance of target mu")
+  expect_true(abs(result$mu - tt) <= tt * 0.05)
+})
+
+test_that("Function returns a converged solution in the second pass when searching back to the previously identified solution", {
+  renege_params <- c(
+    0,
+    0,
+    0.130609994893718,
+    0.170839597237991,
+    0.0816899205064605,
+    0.184743485054583,
+    0.212512806928513,
+    0.145062630281234,
+    0.0887476040042307,
+    0.0866681597837429,
+    0.0962470429106841,
+    0.122065490059333,
+    0.298600354859636
+  )
+
+  tt <- 900
+  result <- optimise_steady_state_mu(
+    referrals = 1280,
+    target_treatments = tt,
+    renege_params = renege_params
+  )
+
+  expect_type(result, "list")
+  expect_equal(result$status, "Converged")
+  expect_equal(
+    result$method,
+    "Between target mu and identified converged value"
+  )
+  expect_true(abs(result$mu - tt) > tt * 0.05)
+})
+
+test_that("Function returns a converged solution in the third pass within the broader range of attempted mus", {
+  renege_params <- c(
+    0,
+    0,
+    0.130609994893718,
+    0.170839597237991,
+    0.0816899205064605,
+    0.184743485054583,
+    0.212512806928513,
+    0.145062630281234,
+    0.0887476040042307,
+    0.0866681597837429,
+    0.0962470429106841,
+    0.122065490059333,
+    0.298600354859636
+  )
+
+  tt <- 500
+  result <- optimise_steady_state_mu(
+    referrals = 1280,
+    target_treatments = tt,
+    renege_params = renege_params
+  )
+
+  expect_type(result, "list")
+  expect_equal(result$status, "Converged")
+  expect_equal(
+    result$method,
+    "Between target mu and identified converged value"
+  )
+  expect_true(abs(result$mu - tt) > tt * 0.05)
+})
+
+
+test_that("Function returns doesn't identify a satisfactory solution", {
+  renege_params <- c(
+    0,
+    0,
+    0.130609994893718,
+    0.170839597237991,
+    0.0816899205064605,
+    0.184743485054583,
+    0.212512806928513,
+    0.145062630281234,
+    0.0887476040042307,
+    0.0866681597837429,
+    0.0962470429106841,
+    0.122065490059333,
+    0.298600354859636
+  )
+
+  tt <- 400
+  result <- optimise_steady_state_mu(
+    referrals = 1280,
+    target_treatments = tt,
+    renege_params = renege_params
+  )
+
+  expect_type(result, "list")
+  expect_equal(result$status, NA)
+  expect_equal(
+    result$method,
+    "No solution identified"
+  )
+})
+
+
+test_that("Function errors", {
+  renege_params <- c(
+    0,
+    0,
+    0.13,
+    0.17
+  )
+
+  tt <- 1000
+  expect_error(
+    optimise_steady_state_mu(
+      referrals = "1280",
+      target_treatments = tt,
+      renege_params = renege_params
+    ),
+    "referrals must be numeric"
+  )
+
+  expect_error(
+    optimise_steady_state_mu(
+      referrals = c(1234, 1234),
+      target_treatments = tt,
+      renege_params = renege_params
+    ),
+    "referrals must be length 1"
+  )
+
+  expect_error(
+    optimise_steady_state_mu(
+      referrals = 1280,
+      target_treatments = "1000",
+      renege_params = renege_params
+    ),
+    "target_treatments must be numeric"
+  )
+
+  expect_error(
+    optimise_steady_state_mu(
+      referrals = 1280,
+      target_treatments = c(tt, tt),
+      renege_params = renege_params
+    ),
+    "target_treatments must be length 1"
+  )
+})
