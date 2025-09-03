@@ -9,6 +9,8 @@ optimise_steady_state_mu(
   referrals,
   target_treatments,
   renege_params,
+  target_time = 4 + (68/487),
+  percentile = 0.92,
   tolerance = target_treatments * 0.05,
   max_iterations = 10
 )
@@ -22,6 +24,11 @@ of referrals.}
 \item{renege_params}{numeric; proportion \ifelse{html}{\out{(0 &le; r<sub>m</sub> &leq; 1)}}{\eqn{(0 \leq r_m \leq 1)}}
 of waiting patients reneging in the m-th month of waiting, where \ifelse{html}{\out{r<sub>2</sub>}}{\eqn{r_2}} = 0.1
 refers to 10\% of those in the second month of waiting reneging.}
+
+\item{target_time}{numeric of length 1; the target waiting time,
+in months, to achieve the specified percentile.}
+
+\item{percentile}{Numeric value between 0 and 1 indicating the desired percentile (default is 0.92).}
 
 \item{tolerance}{Numeric. Acceptable deviation from `target_treatments` for convergence.
 Defaults to 10\% of `target_treatments`.}

@@ -426,27 +426,15 @@ test_that("Function returns a converged solution in the third pass within the br
 
 
 test_that("Function returns doesn't identify a satisfactory solution", {
-  renege_params <- c(
-    0,
-    0,
-    0.130609994893718,
-    0.170839597237991,
-    0.0816899205064605,
-    0.184743485054583,
-    0.212512806928513,
-    0.145062630281234,
-    0.0887476040042307,
-    0.0866681597837429,
-    0.0962470429106841,
-    0.122065490059333,
-    0.298600354859636
-  )
+  renege_params <- rep(1, 6)
 
-  tt <- 400
+  tt <- 950
   result <- optimise_steady_state_mu(
-    referrals = 1280,
+    referrals = 1000,
     target_treatments = tt,
-    renege_params = renege_params
+    renege_params = renege_params,
+    percentile = 0.99,
+    target_time = 1
   )
 
   expect_type(result, "list")

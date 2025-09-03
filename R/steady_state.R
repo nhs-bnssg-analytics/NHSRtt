@@ -392,6 +392,7 @@ find_p <- function(
 #'   Defaults to 10.
 #' @inheritParams initialise_removals
 #' @inheritParams calc_wl_sizes
+#' @inheritParams find_p
 #'
 #' @importFrom purrr pluck map map_chr map_dbl
 #'
@@ -421,6 +422,8 @@ optimise_steady_state_mu <- function(
   referrals,
   target_treatments,
   renege_params,
+  target_time = 4 + (68 / 487),
+  percentile = 0.92,
   tolerance = target_treatments * 0.05,
   max_iterations = 10
 ) {
@@ -458,6 +461,8 @@ optimise_steady_state_mu <- function(
       renege_params = renege_params,
       mu_1 = mu_mid,
       referrals = referrals,
+      target_time = target_time,
+      percentile = percentile,
       max_iterations = 30
     )
 
@@ -509,6 +514,8 @@ optimise_steady_state_mu <- function(
         renege_params = renege_params,
         mu_1 = mu_mid,
         referrals = referrals,
+        target_time = target_time,
+        percentile = percentile,
         max_iterations = 30
       )
     }
@@ -535,6 +542,8 @@ optimise_steady_state_mu <- function(
             renege_params = renege_params,
             mu_1 = x,
             referrals = referrals,
+            target_time = target_time,
+            percentile = percentile,
             max_iterations = 30
           )
         }
@@ -550,19 +559,19 @@ optimise_steady_state_mu <- function(
     # subset all solutions for those that are converged
     converged_solutions <- all_solutions[converged_solutions]
 
-    # of the converged solutions, identify the ones that have
-    # the smalled mu
-    min_mu_solution <- converged_solutions |>
-      purrr::map_dbl(
-        ~ pluck(.x, "mu")
-      ) |>
-      (\(x) x[x == min(x)])()
+    if (!identical(converged_solutions, list())) {
+      # of the converged solutions, identify the ones that have
+      # the smalled mu
+      min_mu_solution <- converged_solutions |>
+        purrr::map_dbl(
+          ~ pluck(.x, "mu")
+        ) |>
+        (\(x) x == min(x))()
 
-    # subset the converged solutions for the one with the
-    # smallest mu
-    min_mu_solution <- converged_solutions[min_mu_solution]
+      # subset the converged solutions for the one with the
+      # smallest mu
+      min_mu_solution <- converged_solutions[min_mu_solution]
 
-    if (!is.null(min_mu_solution[[1]])) {
       return(list(
         p1 = min_mu_solution[[1]]$p1,
         time_p = min_mu_solution[[1]]$time_p,
