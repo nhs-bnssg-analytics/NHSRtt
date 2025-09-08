@@ -151,6 +151,7 @@ calc_wl_sizes <- function(wl_removals, referrals) {
 #' hist_percentile_calc(wl_structure, percentile = 0.9)
 #' }
 #' @importFrom dplyr arrange mutate slice filter
+#' @export
 hist_percentile_calc <- function(
   wl_structure,
   percentile = 0.92,
