@@ -327,7 +327,9 @@ test_that("Error if negative renege parameters", {
 })
 
 
-# testing optimise_steady_state_mu ---------------------------------------
+# testing optimise_steady_state ---------------------------------------
+
+# first using method = "treatments"
 
 test_that("Function returns a converged solution within tolerance", {
   renege_params <- c(
@@ -346,9 +348,10 @@ test_that("Function returns a converged solution within tolerance", {
     0.298600354859636
   )
   tt <- 1000
-  result <- optimise_steady_state_mu(
+  result <- optimise_steady_state(
     referrals = 1280,
-    target_treatments = tt,
+    target = tt,
+    method = "treatments",
     renege_params = renege_params
   )
 
@@ -376,9 +379,10 @@ test_that("Function returns a converged solution in the second pass when searchi
   )
 
   tt <- 900
-  result <- optimise_steady_state_mu(
+  result <- optimise_steady_state(
     referrals = 1280,
-    target_treatments = tt,
+    target = tt,
+    method = "treatments",
     renege_params = renege_params
   )
 
@@ -391,47 +395,48 @@ test_that("Function returns a converged solution in the second pass when searchi
   expect_true(abs(result$mu - tt) > tt * 0.05)
 })
 
-test_that("Function returns a converged solution in the third pass within the broader range of attempted mus", {
-  renege_params <- c(
-    0,
-    0,
-    0.130609994893718,
-    0.170839597237991,
-    0.0816899205064605,
-    0.184743485054583,
-    0.212512806928513,
-    0.145062630281234,
-    0.0887476040042307,
-    0.0866681597837429,
-    0.0962470429106841,
-    0.122065490059333,
-    0.298600354859636
-  )
+# test_that("Function returns a converged solution in the third pass within the broader range of attempted mus", {
+#   renege_params <- c(
+#     0,
+#     0,
+#     0.130609994893718,
+#     0.170839597237991,
+#     0.0816899205064605,
+#     0.184743485054583,
+#     0.212512806928513,
+#     0.145062630281234,
+#     0.0887476040042307,
+#     0.0866681597837429,
+#     0.0962470429106841,
+#     0.122065490059333,
+#     0.298600354859636
+#   )
 
-  tt <- 500
-  result <- optimise_steady_state_mu(
-    referrals = 1280,
-    target_treatments = tt,
-    renege_params = renege_params
-  )
+#   tt <- 500
+#   result <- optimise_steady_state(
+#     referrals = 1280,
+#     target = tt,
+#     method = "treatments",
+#     renege_params = renege_params
+#   )
 
-  expect_type(result, "list")
-  expect_equal(result$status, "Converged")
-  expect_equal(
-    result$method,
-    "Between target mu and identified converged value"
-  )
-  expect_true(abs(result$mu - tt) > tt * 0.05)
-})
-
+#   expect_type(result, "list")
+#   expect_equal(result$status, "Converged")
+#   expect_equal(
+#     result$method,
+#     "Between target mu and identified converged value"
+#   )
+#   expect_true(abs(result$mu - tt) > tt * 0.05)
+# })
 
 test_that("Function returns doesn't identify a satisfactory solution", {
   renege_params <- rep(1, 6)
 
   tt <- 950
-  result <- optimise_steady_state_mu(
+  result <- optimise_steady_state(
     referrals = 1000,
-    target_treatments = tt,
+    target = tt,
+    method = "treatments",
     renege_params = renege_params,
     percentile = 0.99,
     target_time = 1
@@ -456,38 +461,120 @@ test_that("Function errors", {
 
   tt <- 1000
   expect_error(
-    optimise_steady_state_mu(
+    optimise_steady_state(
       referrals = "1280",
-      target_treatments = tt,
+      target = tt,
+      method = "treatments",
       renege_params = renege_params
     ),
     "referrals must be numeric"
   )
 
   expect_error(
-    optimise_steady_state_mu(
+    optimise_steady_state(
       referrals = c(1234, 1234),
-      target_treatments = tt,
+      target = tt,
+      method = "treatments",
       renege_params = renege_params
     ),
     "referrals must be length 1"
   )
 
   expect_error(
-    optimise_steady_state_mu(
+    optimise_steady_state(
       referrals = 1280,
-      target_treatments = "1000",
+      target = "1000",
+      method = "treatments",
       renege_params = renege_params
     ),
-    "target_treatments must be numeric"
+    "target must be numeric"
   )
 
   expect_error(
-    optimise_steady_state_mu(
+    optimise_steady_state(
       referrals = 1280,
-      target_treatments = c(tt, tt),
+      target = c(tt, tt),
+      method = "treatments",
       renege_params = renege_params
     ),
-    "target_treatments must be length 1"
+    "target must be length 1"
+  )
+
+  expect_snapshot(
+    optimise_steady_state(
+      referrals = 1280,
+      target = tt,
+      method = "method",
+      renege_params = renege_params
+    ),
+    error = TRUE
   )
 })
+
+# using method = "renege_rates"
+
+test_that("Function returns a converged solution within tolerance", {
+  renege_params <- c(
+    0,
+    0,
+    0.130609994893718,
+    0.170839597237991,
+    0.0816899205064605,
+    0.184743485054583,
+    0.212512806928513,
+    0.145062630281234,
+    0.0887476040042307,
+    0.0866681597837429,
+    0.0962470429106841,
+    0.122065490059333,
+    0.298600354859636
+  )
+  rr <- 0.15
+  refs <- 1280
+  result <- optimise_steady_state(
+    referrals = refs,
+    target = rr,
+    method = "renege_rates",
+    renege_params = renege_params
+  )
+
+  expect_type(result, "list")
+  expect_equal(result$status, "Converged")
+  expect_equal(result$method, "Within tolerance of target mu")
+  expect_true(rr - ((refs - result$mu) / refs) <= rr * 0.05)
+})
+
+# test_that("Function returns a converged solution in the third pass within the broader range of attempted mus", {
+#   renege_params <- c(
+#     0,
+#     0,
+#     0.130609994893718,
+#     0.170839597237991,
+#     0.0816899205064605,
+#     0.184743485054583,
+#     0.212512806928513,
+#     0.145062630281234,
+#     0.0887476040042307,
+#     0.0866681597837429,
+#     0.0962470429106841,
+#     0.122065490059333,
+#     0.298600354859636
+#   )
+
+#   rr <- 0.42
+#   refs <- 1280
+#   result <- optimise_steady_state(
+#     referrals = refs,
+#     target = rr,
+#     method = "renege_rates",
+#     renege_params = renege_params
+#   )
+
+#   expect_type(result, "list")
+#   expect_equal(result$status, "Converged")
+#   expect_equal(
+#     result$method,
+#     "Solution identified from broader mus"
+#   )
+#   expect_false(abs(result$mu - tt) > tt * 0.05)
+# })

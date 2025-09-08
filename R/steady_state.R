@@ -375,21 +375,25 @@ find_p <- function(
 }
 
 
-#' Identify the steady-state solution with the closest treatment capacity to a given
-#' target
+#' Identify the steady-state solution with the closest treatment capacity or renege rate
+#'   to a given target
 #'
-#' @description This function performs a binary search to identify a treatment capacity that solves
-#' the steady state criteria close to a specified target treatment capacity `mu`. It uses the
-#' `find_p()` function to evaluate system convergence and iteratively adjusts `mu_1`
-#' until the solution is within a defined tolerance or the maximum number of iterations
-#' is reached. If convergence is not achieved, the function performs secondary searches
-#' to identify the best available steady-state solution.
+#' @description This function performs a binary search to identify a treatment capacity or
+#'   renege rate that solves the steady state criteria closest to a specified target
+#'   treatment capacity `mu` or renege rate. It uses the `find_p()` function to evaluate
+#'   system convergence and iteratively adjusts `mu_1` until the solution is within a
+#'   defined tolerance or the maximum number of iterations is reached. If convergence is
+#'   not achieved, the function performs secondary searches to identify the best available
+#'   steady-state solution.
 #'
-#' @param target_treatments Numeric. The desired treatment capacity to be achieved.
-#' @param tolerance Numeric. Acceptable deviation from `target_treatments` for convergence.
-#'   Defaults to 10\% of `target_treatments`.
+#' @param target Numeric. The desired treatment capacity/renege rate to be achieved, see
+#'  'method' argument to define which one will be used.
+#' @param tolerance Numeric. Acceptable deviation from `target` for convergence.
+#'   Defaults to 10\% of `target`.
 #' @param max_iterations Integer. Maximum number of iterations for the binary search.
 #'   Defaults to 10.
+#' @param method String, length 1. Can take value "treatments" (default) to optimise based
+#'   on treatment targets, or "renege_rates" to optimise on renege rates
 #' @inheritParams initialise_removals
 #' @inheritParams calc_wl_sizes
 #' @inheritParams find_p
@@ -410,21 +414,23 @@ find_p <- function(
 #'
 #' @examples
 #' \dontrun{
-#' optimise_steady_state_mu(
+#' optimise_steady_state(
 #'   referrals = 100,
-#'   target_treatments = 80,
-#'   renege_params = runif(24)
+#'   target = 80,
+#'   renege_params = runif(24),
+#'   method = "treatments"
 #' )
 #' }
 #'
 #' @export
-optimise_steady_state_mu <- function(
+optimise_steady_state <- function(
   referrals,
-  target_treatments,
+  target,
   renege_params,
+  method = c("treatments", "renege_rates"),
   target_time = 4 + (68 / 487),
   percentile = 0.92,
-  tolerance = target_treatments * 0.05,
+  tolerance = target * 0.05,
   max_iterations = 10
 ) {
   # check referrals is single length numeric
@@ -436,17 +442,33 @@ optimise_steady_state_mu <- function(
     stop("referrals must be length 1")
   }
 
-  # check target_treatments is single length numeric
-  if (!is.numeric(target_treatments)) {
-    stop("target_treatments must be numeric")
+  # check target is single length numeric
+  if (!is.numeric(target)) {
+    stop("target must be numeric")
   }
 
-  if (length(target_treatments) != 1) {
-    stop("target_treatments must be length 1")
+  if (length(target) != 1) {
+    stop("target must be length 1")
   }
 
-  mu_high <- target_treatments * 0.7
-  mu_low <- target_treatments * 0.2
+  # check method input
+  if (identical(method, c("treatments", "renege_rates"))) {
+    method <- "treatments"
+  }
+
+  method <- match.arg(
+    method,
+    c("treatments", "renege_rates")
+  )
+
+  if (method == "treatments") {
+    mu_high <- target * 0.7
+    mu_low <- target * 0.2
+  } else if (method == "renege_rates") {
+    target_mu <- referrals - (referrals * target)
+    mu_high <- target_mu * 0.7
+    mu_low <- target_mu * 0.2
+  }
 
   iter <- 0
   tol <- 1e6
@@ -471,26 +493,41 @@ optimise_steady_state_mu <- function(
       mu_1_converged <- mu_mid
     }
 
-    tol <- abs(solution$mu - target_treatments)
-
+    if (method == "treatments") {
+      calc_solution <- solution$mu
+    } else if (method == "renege_rates") {
+      calc_solution <- ((referrals - solution$mu) / referrals)
+    }
+    # browser()
+    tol <- abs(calc_solution - target)
     if (tol < tolerance) {
       break
-    } else if (solution$mu < target_treatments) {
-      # If the treatment capacity is too low, increase mu1 to find a higher treatment capacity
-      mu_low <- mu_mid
-    } else {
-      # If the time is too high, decrease mu1 to find a lower treatment capacity
-      mu_high <- mu_mid
+    } else if (method == "treatments") {
+      if (calc_solution < target) {
+        # If the treatment capacity is too low, increase mu1 to find a higher treatment capacity
+        mu_low <- mu_mid
+      } else {
+        # If the treatment capacity is too high, decrease mu1 to find a lower treatment capacity
+        mu_high <- mu_mid
+      }
+    } else if (method == "renege_rates") {
+      if (calc_solution < target) {
+        # If the renege rate is too low, decrease mu1 to find a higher treatment capacity
+        mu_high <- mu_mid
+      } else {
+        # If the renege rate is too high, increase mu1 to find a lower treatment capacity
+        mu_low <- mu_mid
+      }
     }
   }
 
   # here we need to perform and secondary analysis for those who either
-  # haven't found the solution that has a similar mu to the target_treatments
+  # haven't found the solution that has a similar mu to the target
   # or whose solution isn't in steady state
-
+  # browser()
   if (solution$status == "Converged") {
     return(
-      return(list(
+      list(
         p1 = solution$p1,
         time_p = solution$time_p,
         mu = solution$mu,
@@ -499,7 +536,7 @@ optimise_steady_state_mu <- function(
         niterations = iter,
         status = solution$status,
         method = "Within tolerance of target mu"
-      ))
+      )
     )
   } else if (isTRUE(found_steady_state)) {
     # where steady state has been found in previous iterations but
@@ -560,26 +597,42 @@ optimise_steady_state_mu <- function(
     converged_solutions <- all_solutions[converged_solutions]
 
     if (!identical(converged_solutions, list())) {
-      # of the converged solutions, identify the ones that have
-      # the smalled mu
-      min_mu_solution <- converged_solutions |>
-        purrr::map_dbl(
-          ~ pluck(.x, "mu")
-        ) |>
-        (\(x) x == min(x))()
+      if (method == "treatments") {
+        # of the converged solutions, identify the ones that have
+        # the smalled mu
+        min_mu_solution <- converged_solutions |>
+          purrr::map_dbl(
+            ~ pluck(.x, "mu")
+          ) |>
+          (\(x) x == min(x))()
 
-      # subset the converged solutions for the one with the
-      # smallest mu
-      min_mu_solution <- converged_solutions[min_mu_solution]
+        # subset the converged solutions for the one with the
+        # smallest mu
+        final_solution <- converged_solutions[min_mu_solution]
+      } else if (method == "renege_rates") {
+        # of the converged solutions, identify the ones that have
+        # the smalled renege rate
+        min_rr_solution <- converged_solutions |>
+          purrr::map_dbl(
+            ~ pluck(.x, "mu")
+          ) |>
+          (\(x) {
+            ((referrals - x) / referrals) == min((referrals - x) / referrals)
+          })()
+
+        # subset the converged solutions for the one with the
+        # smallest mu
+        final_solution <- converged_solutions[min_rr_solution]
+      }
 
       return(list(
-        p1 = min_mu_solution[[1]]$p1,
-        time_p = min_mu_solution[[1]]$time_p,
-        mu = min_mu_solution[[1]]$mu,
-        wlsize = sum(min_mu_solution[[1]]$waiting_list$wlsize),
-        waiting_list = min_mu_solution[[1]]$waiting_list,
+        p1 = final_solution[[1]]$p1,
+        time_p = final_solution[[1]]$time_p,
+        mu = final_solution[[1]]$mu,
+        wlsize = sum(final_solution[[1]]$waiting_list$wlsize),
+        waiting_list = final_solution[[1]]$waiting_list,
         niterations = -1, # eg, exceeded the iterations step
-        status = min_mu_solution[[1]]$status,
+        status = final_solution[[1]]$status,
         method = "Solution identified from broader mus"
       ))
     } else {

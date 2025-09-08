@@ -109,7 +109,7 @@ latest_orgs <- function(
 #' webpage
 #'
 #' @param url string; url of the NHS Referral to Treatment (RTT) Waiting Times
-#' @param date_start date; start date (earliest date is 1st April 2016, but the
+#' @param date_start date; start date (earliest date is 1st May 2016, but the
 #'   default is 1st April 2019)
 #' @param date_end date; end date (defaults to "today")
 #' @param show_progress logical; show progress of downloading and processing
