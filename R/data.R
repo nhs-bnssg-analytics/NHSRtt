@@ -78,6 +78,22 @@ latest_orgs <- function(
       .data$`Commissioner Parent Name`,
       .data$`Commissioner Org Code`,
       .data$`Commissioner Org Name`
+    ) |>
+    mutate(
+      `Provider Org Name` = case_when(
+        .data$`Provider Org Name` == "DUCHY HOSPITAL" ~
+          paste0(
+            .data$`Provider Org Name`,
+            " (",
+            gsub(
+              "NHS | INTEGRATED CARE BOARD",
+              "",
+              .data$`Provider Parent Name`
+            ),
+            ")"
+          ),
+        .default = .data$`Provider Org Name`
+      )
     )
 
   # get the lateset ICB to region lkp file from here:
