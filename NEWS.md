@@ -1,5 +1,9 @@
-# NHSRtt 0.3.0.9000
+# NHSRtt 0.3.1
 
+* Makes Duchy Hospital names unique
+* exports the `hist_percentile_calc()` function
+* provides status of convergence for `find_p()`
+* exports `optimise_steady_state_mu()` function with target time and percentile as inputs
 
 # NHSRtt 0.3.0
 
