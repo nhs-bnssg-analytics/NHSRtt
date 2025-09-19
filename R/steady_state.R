@@ -24,12 +24,12 @@ geom_fn_s <- function(p1, max_num_months = 24) {
     stop("max_num_months must be between 1 and 24")
   }
 
-  probs_24_month <- stats::dgeom(0:23, prob = 1 - p1)
+  probs_24_month <- stats::dgeom(0:24, prob = 1 - p1)
 
   # aggregate top compartment
   probs <- c(
     probs_24_month[seq_len(max_num_months - 1)],
-    sum(probs_24_month[max_num_months:24])
+    sum(probs_24_month[max_num_months:25])
   )
   return(probs)
 }
@@ -68,7 +68,8 @@ initialise_removals <- function(renege_params, p1, mu) {
   wl_removals <- data.frame(
     months_waited_id = seq_along(renege_params) - 1,
     r = renege_params,
-    service = round(s_distribution * mu)
+    # service = round(s_distribution * mu)
+    service = s_distribution * mu
   )
   return(wl_removals)
 }
@@ -108,13 +109,15 @@ calc_wl_sizes <- function(wl_removals, referrals) {
 
   for (i in 1:nrow(wl_removals)) {
     prev_wlsize <- if (i == 1) referrals else wl_removals$wlsize[i - 1]
-    val <- floor(prev_wlsize * (1 - wl_removals$r[i]) - wl_removals$service[i])
+    # val <- floor(prev_wlsize * (1 - wl_removals$r[i]) - wl_removals$service[i])
+    val <- prev_wlsize * (1 - wl_removals$r[i]) - wl_removals$service[i]
     if (val > 0) {
       wl_removals$wlsize[i] <- val
       wl_removals$sigma[i] <- wl_removals$service[i]
     } else {
       wl_removals$wlsize[i] <- 0
-      wl_removals$sigma[i] <- floor(prev_wlsize * (1 - wl_removals$r[i]))
+      # wl_removals$sigma[i] <- floor(prev_wlsize * (1 - wl_removals$r[i]))
+      wl_removals$sigma[i] <- prev_wlsize * (1 - wl_removals$r[i])
     }
   }
   return(wl_removals)
@@ -148,6 +151,7 @@ calc_wl_sizes <- function(wl_removals, referrals) {
 #' hist_percentile_calc(wl_structure, percentile = 0.9)
 #' }
 #' @importFrom dplyr arrange mutate slice filter
+#' @export
 hist_percentile_calc <- function(
   wl_structure,
   percentile = 0.92,
@@ -214,14 +218,14 @@ hist_percentile_calc <- function(
 #' (\code{mu_1}) and other parameters.
 #'
 #' @param target_time numeric of length 1; the target waiting time,
-#'    in weeks, to achieve the specified percentile.
+#'    in months, to achieve the specified percentile.
 #' @param mu_1 numeric of length 1; treatment capacity in the first month.
 #' @param p1_lower numeric of length 1; lower bound for the binary search of \code{p1}.
 #'   Must be between 0 and 1 and less than  \code{p1_upper}. Defaults to 0.1.
 #' @param p1_upper numeric of length 1; upper bound for the binary search of \code{p1}.
 #'   Must be between 0 and 1 and more than  \code{p1_lower}. Defaults to 0.85.
 #' @param tolerance numeric of length 1; tolerance for the binary search stopping
-#'   criterion. The unit is weeks.
+#'   criterion. The unit is months.
 #' @param max_iterations numeric of length 1; maximum number of iterations to
 #'   search for a valid result
 #' @inheritParams geom_fn_s
@@ -235,8 +239,8 @@ hist_percentile_calc <- function(
 #'   when the solution is found.} \item{wlsize}{The total size of the waiting list
 #'   when the solution is found.} \item{waiting_list}{The data frame with historical data
 #'   formatted and waiting list sizes calculated.} \item{niterations}{The number
-#'   of iterations performed in the binary search.} Where there are NAs included
-#'   in the results, this indicates that a solution couldn't be found.
+#'   of iterations performed in the binary search.} \item{status}{Converged indicates a
+#'   solution was found, and Not converged indicates no solution was found}
 #'
 #' @details The function repeatedly uses the removals table (from \code{initialise_removals()})
 #'   and calculates waiting list sizes for candidate values of \code{p1}, using binary search to
@@ -250,7 +254,7 @@ hist_percentile_calc <- function(
 #'
 #' @examples
 #' find_p(
-#'   target_time = 18 / 4.35,
+#'   target_time = 4 + (68 / 487),
 #'   renege_params = c(0.04, 0.04, 0.03, 0.01, 0.02, 0.02, 0.01),
 #'   mu_1 = 2651.227,
 #'   p1_lower = 0.1,
@@ -262,7 +266,7 @@ hist_percentile_calc <- function(
 #' @export
 #'
 find_p <- function(
-  target_time = 18 / 4.35,
+  target_time = 4 + (68 / 487),
   renege_params,
   mu_1,
   p1_lower = 0.1,
@@ -282,13 +286,21 @@ find_p <- function(
     stop("p1_lower and p1_upper need to be between 0 and 1")
   }
 
+  # check all renege parameters are greater or equal to 0
+  if (!all(renege_params >= 0)) {
+    stop("All renege_params must be greater or equal to 0")
+  }
+
   max_num_months <- length(renege_params)
 
   iter_count <- 0
   time_p <- 1e12 # dummy number so the while loop can commence
   # Use binary search to find the value of p1 that achieves the target_time
   # at the desired percentile
-  while (abs(time_p - target_time) > tolerance & iter_count < max_iterations) {
+  while (
+    abs(time_p - target_time) > tolerance &
+      iter_count < max_iterations
+  ) {
     iter_count <- iter_count + 1
 
     p1_mid <- (p1_lower + p1_upper) / 2 # Calculate midpoint of current p1
@@ -323,7 +335,8 @@ find_p <- function(
         mu = sum(waiting_list$sigma),
         wlsize = sum(waiting_list$wlsize),
         waiting_list = waiting_list,
-        niterations = iter_count
+        niterations = iter_count,
+        status = "Converged"
       ))
     } else if (time_p > target_time) {
       # If the time is too high, increase p1_lower to search higher p1
@@ -342,12 +355,298 @@ find_p <- function(
   )
   waiting_list <- calc_wl_sizes(removals_table, referrals)
 
+  # Calculate the interpolated time at which the desired percentile of
+  # cumulative wlsize is reached
+  time_p <- hist_percentile_calc(
+    waiting_list,
+    percentile = percentile,
+    wlsize_col = "wlsize",
+    time_col = "months_waited_id"
+  )
+
   return(list(
-    p1 = NA,
-    time_p = NA,
-    mu = NA,
-    wlsize = NA,
+    p1 = p1_mid,
+    time_p = time_p,
+    mu = sum(waiting_list$sigma),
+    wlsize = sum(waiting_list$wlsize),
     waiting_list = waiting_list,
-    niterations = iter_count
+    niterations = iter_count,
+    status = "Not converged"
   ))
+}
+
+
+#' Identify the steady-state solution with the closest treatment capacity or renege rate
+#'   to a given target
+#'
+#' @description This function performs a binary search to identify a treatment capacity or
+#'   renege rate that solves the steady state criteria closest to a specified target
+#'   treatment capacity `mu` or renege rate. It uses the `find_p()` function to evaluate
+#'   system convergence and iteratively adjusts `mu_1` until the solution is within a
+#'   defined tolerance or the maximum number of iterations is reached. If convergence is
+#'   not achieved, the function performs secondary searches to identify the best available
+#'   steady-state solution.
+#'
+#' @param target Numeric. The desired treatment capacity/renege rate to be achieved, see
+#'  'method' argument to define which one will be used.
+#' @param tolerance Numeric. Acceptable deviation from `target` for convergence.
+#'   Defaults to 10\% of `target`.
+#' @param max_iterations Integer. Maximum number of iterations for the binary search.
+#'   Defaults to 10.
+#' @param method String, length 1. Can take value "treatments" (default) to optimise based
+#'   on treatment targets, or "renege_rates" to optimise on renege rates
+#' @inheritParams initialise_removals
+#' @inheritParams calc_wl_sizes
+#' @inheritParams find_p
+#'
+#' @importFrom purrr pluck map map_chr map_dbl
+#'
+#' @return A list containing:
+#'   \item{p1}{The value of \code{p1} found to achieve the target waiting time.}
+#'   \item{time_p}{The interpolated waiting time at the specified percentile.}
+#'   \item{mu}{The total number of treatments required when the solution is found.}
+#'   \item{wlsize}{The total size of the waiting list when the solution is found.}
+#'   \item{waiting_list}{The data frame with historical data formatted and waiting
+#'     list sizes calculated.}
+#'   \item{niterations}{The number of iterations performed in the binary search.}
+#'   \item{status}{Converged indicates a solution was found, and Not converged
+#'     indicates no solution was found.}
+#'   \item{method}{The method the solution was identified.}
+#'
+#' @examples
+#' \dontrun{
+#' optimise_steady_state(
+#'   referrals = 100,
+#'   target = 80,
+#'   renege_params = runif(24),
+#'   method = "treatments"
+#' )
+#' }
+#'
+#' @export
+optimise_steady_state <- function(
+  referrals,
+  target,
+  renege_params,
+  method = c("treatments", "renege_rates"),
+  target_time = 4 + (68 / 487),
+  percentile = 0.92,
+  tolerance = target * 0.05,
+  max_iterations = 10
+) {
+  # check referrals is single length numeric
+  if (!is.numeric(referrals)) {
+    stop("referrals must be numeric")
+  }
+
+  if (length(referrals) != 1) {
+    stop("referrals must be length 1")
+  }
+
+  # check target is single length numeric
+  if (!is.numeric(target)) {
+    stop("target must be numeric")
+  }
+
+  if (length(target) != 1) {
+    stop("target must be length 1")
+  }
+
+  # check method input
+  if (identical(method, c("treatments", "renege_rates"))) {
+    method <- "treatments"
+  }
+
+  method <- match.arg(
+    method,
+    c("treatments", "renege_rates")
+  )
+
+  if (method == "treatments") {
+    mu_high <- target * 0.7
+    mu_low <- target * 0.2
+  } else if (method == "renege_rates") {
+    target_mu <- referrals - (referrals * target)
+    mu_high <- target_mu * 0.7
+    mu_low <- target_mu * 0.2
+  }
+
+  iter <- 0
+  tol <- 1e6
+  found_steady_state <- FALSE
+  mu_1_converged <- NA
+
+  while (tol > tolerance & iter < max_iterations) {
+    iter <- iter + 1
+    mu_mid <- (mu_high + mu_low) / 2 # Calculate midpoint of current mu1
+
+    solution <- find_p(
+      renege_params = renege_params,
+      mu_1 = mu_mid,
+      referrals = referrals,
+      target_time = target_time,
+      percentile = percentile,
+      max_iterations = 30
+    )
+
+    if (solution$status == "Converged") {
+      found_steady_state <- TRUE
+      mu_1_converged <- mu_mid
+    }
+
+    if (method == "treatments") {
+      calc_solution <- solution$mu
+    } else if (method == "renege_rates") {
+      calc_solution <- ((referrals - solution$mu) / referrals)
+    }
+    # browser()
+    tol <- abs(calc_solution - target)
+    if (tol < tolerance) {
+      break
+    } else if (method == "treatments") {
+      if (calc_solution < target) {
+        # If the treatment capacity is too low, increase mu1 to find a higher treatment capacity
+        mu_low <- mu_mid
+      } else {
+        # If the treatment capacity is too high, decrease mu1 to find a lower treatment capacity
+        mu_high <- mu_mid
+      }
+    } else if (method == "renege_rates") {
+      if (calc_solution < target) {
+        # If the renege rate is too low, decrease mu1 to find a higher treatment capacity
+        mu_high <- mu_mid
+      } else {
+        # If the renege rate is too high, increase mu1 to find a lower treatment capacity
+        mu_low <- mu_mid
+      }
+    }
+  }
+
+  # here we need to perform and secondary analysis for those who either
+  # haven't found the solution that has a similar mu to the target
+  # or whose solution isn't in steady state
+  # browser()
+  if (solution$status == "Converged") {
+    return(
+      list(
+        p1 = solution$p1,
+        time_p = solution$time_p,
+        mu = solution$mu,
+        wlsize = sum(solution$waiting_list$wlsize),
+        waiting_list = solution$waiting_list,
+        niterations = iter,
+        status = solution$status,
+        method = "Within tolerance of target mu"
+      )
+    )
+  } else if (isTRUE(found_steady_state)) {
+    # where steady state has been found in previous iterations but
+    # not the final iteration, search from the final iteration towards
+    # the iteration where it was found, and select the first occasion
+    # that steady state is identified
+    increment <- (mu_1_converged - mu_mid) / 20
+
+    while (solution$status == "Not converged") {
+      mu_mid <- mu_mid + increment
+      solution <- find_p(
+        renege_params = renege_params,
+        mu_1 = mu_mid,
+        referrals = referrals,
+        target_time = target_time,
+        percentile = percentile,
+        max_iterations = 30
+      )
+    }
+    return(list(
+      p1 = solution$p1,
+      time_p = solution$time_p,
+      mu = solution$mu,
+      wlsize = sum(solution$waiting_list$wlsize),
+      waiting_list = solution$waiting_list,
+      niterations = -1, # eg, exceeded the iterations step
+      status = solution$status,
+      method = "Between target mu and identified converged value"
+    ))
+  } else {
+    # search along a range of solutions unrelated to the previous searches
+    all_solutions <- seq(
+      from = referrals * 0.1,
+      to = referrals * 0.7,
+      length.out = 400
+    ) |>
+      purrr::map(
+        \(x) {
+          solution <- find_p(
+            renege_params = renege_params,
+            mu_1 = x,
+            referrals = referrals,
+            target_time = target_time,
+            percentile = percentile,
+            max_iterations = 30
+          )
+        }
+      )
+
+    # find only converged solutions (eg, ones in steady state)
+    converged_solutions <- all_solutions |>
+      purrr::map_chr(
+        ~ pluck(.x, "status")
+      ) |>
+      (\(x) x == "Converged")()
+
+    # subset all solutions for those that are converged
+    converged_solutions <- all_solutions[converged_solutions]
+
+    if (!identical(converged_solutions, list())) {
+      if (method == "treatments") {
+        # of the converged solutions, identify the ones that have
+        # the smalled mu
+        min_mu_solution <- converged_solutions |>
+          purrr::map_dbl(
+            ~ pluck(.x, "mu")
+          ) |>
+          (\(x) x == min(x))()
+
+        # subset the converged solutions for the one with the
+        # smallest mu
+        final_solution <- converged_solutions[min_mu_solution]
+      } else if (method == "renege_rates") {
+        # of the converged solutions, identify the ones that have
+        # the smalled renege rate
+        min_rr_solution <- converged_solutions |>
+          purrr::map_dbl(
+            ~ pluck(.x, "mu")
+          ) |>
+          (\(x) {
+            ((referrals - x) / referrals) == min((referrals - x) / referrals)
+          })()
+
+        # subset the converged solutions for the one with the
+        # smallest mu
+        final_solution <- converged_solutions[min_rr_solution]
+      }
+
+      return(list(
+        p1 = final_solution[[1]]$p1,
+        time_p = final_solution[[1]]$time_p,
+        mu = final_solution[[1]]$mu,
+        wlsize = sum(final_solution[[1]]$waiting_list$wlsize),
+        waiting_list = final_solution[[1]]$waiting_list,
+        niterations = -1, # eg, exceeded the iterations step
+        status = final_solution[[1]]$status,
+        method = "Solution identified from broader mus"
+      ))
+    } else {
+      return(list(
+        p1 = NA,
+        time_p = NA,
+        mu = NA,
+        wlsize = NA,
+        waiting_list = NULL,
+        niterations = -1, # eg, exceeded the iterations step
+        status = NA,
+        method = "No solution identified"
+      ))
+    }
+  }
 }

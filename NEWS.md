@@ -1,3 +1,14 @@
+# NHSRtt 0.3.1
+
+* Makes Duchy Hospital names unique
+* exports the `hist_percentile_calc()` function
+* provides status of convergence for `find_p()`
+* exports `optimise_steady_state_mu()` function with target time and percentile as inputs
+
+# NHSRtt 0.3.0
+
+* provides user control over whether negative parameters are allowed from the `calibrate_capacity_renege_params()` function using the new `allow_negative_params` function
+
 # NHSRtt 0.2.4
 
 * steady state calculation available using the `find_p()` function

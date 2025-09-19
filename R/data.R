@@ -78,6 +78,22 @@ latest_orgs <- function(
       .data$`Commissioner Parent Name`,
       .data$`Commissioner Org Code`,
       .data$`Commissioner Org Name`
+    ) |>
+    mutate(
+      `Provider Org Name` = case_when(
+        .data$`Provider Org Name` == "DUCHY HOSPITAL" ~
+          paste0(
+            .data$`Provider Org Name`,
+            " (",
+            gsub(
+              "NHS | INTEGRATED CARE BOARD",
+              "",
+              .data$`Provider Parent Name`
+            ),
+            ")"
+          ),
+        .default = .data$`Provider Org Name`
+      )
     )
 
   # get the lateset ICB to region lkp file from here:
@@ -109,7 +125,7 @@ latest_orgs <- function(
 #' webpage
 #'
 #' @param url string; url of the NHS Referral to Treatment (RTT) Waiting Times
-#' @param date_start date; start date (earliest date is 1st April 2016, but the
+#' @param date_start date; start date (earliest date is 1st May 2016, but the
 #'   default is 1st April 2019)
 #' @param date_end date; end date (defaults to "today")
 #' @param show_progress logical; show progress of downloading and processing

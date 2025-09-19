@@ -17,6 +17,14 @@
 #' @param full_breakdown logical; include a full breakdown of monthly
 #'   transitions by period. FALSE provides the parameters by months_waited_id
 #'   only
+#' @param allow_negative_params logical; data issues can result in negative
+#'   renege or capacity parameters. These would result in the opposite effect
+#'   occurring (eg, individuals entering the pathway rather than being removed).
+#'   In some cases, this can be legitimate (like an inter-provider transfer
+#'   leading to patients entering a pathway with no accompanying clock start) but
+#'   in many cases (particularly smaller specialties) these are mainly a result
+#'   of data system issues leading to insufficient clock starts, and forcing the
+#'   parameters to zero then allows sensible subsequent calculations
 #' @importFrom dplyr setdiff across summarise count filter if_else
 #' @importFrom rlang .data
 #' @export
@@ -45,57 +53,127 @@
 #'   incompletes = incomp,
 #'   completes = comp,
 #'   max_months_waited = max_months,
-#'   redistribute_m0_reneges = TRUE
+#'   redistribute_m0_reneges = TRUE,
+#'   allow_negative_params = FALSE
 #' )
-calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
-                                             max_months_waited = 12,
-                                             redistribute_m0_reneges,
-                                             full_breakdown = FALSE) {
-
+calibrate_capacity_renege_params <- function(
+  referrals,
+  incompletes,
+  completes,
+  max_months_waited = 12,
+  redistribute_m0_reneges,
+  full_breakdown = FALSE,
+  allow_negative_params
+) {
   # data checks
   # redistribute_m0_reneges
-  if (!is.logical(redistribute_m0_reneges))
+  if (!is.logical(redistribute_m0_reneges)) {
     stop("adjust_renege_param must be TRUE or FALSE")
+  }
 
-  if (is.na(redistribute_m0_reneges))
+  if (is.na(redistribute_m0_reneges)) {
     stop("adjust_renege_param must be TRUE or FALSE")
+  }
+
+  # allow_negative_params
+  if (!is.logical(allow_negative_params)) {
+    stop("adjust_renege_param must be TRUE or FALSE")
+  }
+
+  if (is.na(allow_negative_params)) {
+    stop("adjust_renege_param must be TRUE or FALSE")
+  }
 
   # max_months_waited
-  if (!is.numeric(max_months_waited))
+  if (!is.numeric(max_months_waited)) {
     stop("max_months_waited must be numeric")
+  }
 
-  if (length(max_months_waited) != 1)
+  if (length(max_months_waited) != 1) {
     stop("max_months_waited must be length 1")
+  }
 
   # checking names
   # referrals
-  if (length(dplyr::setdiff(names(referrals), c("period_id", "referrals")) != 0))
+  if (
+    length(dplyr::setdiff(names(referrals), c("period_id", "referrals")) != 0)
+  ) {
     stop("the field names for referrals should be period_id and referrals")
+  }
 
   # completes
-  if (length(dplyr::setdiff(names(completes), c("period_id", "months_waited_id", "treatments")) != 0))
-    stop("the field names for completes should be period_id, months_waited_id and treatments")
+  if (
+    length(
+      dplyr::setdiff(
+        names(completes),
+        c("period_id", "months_waited_id", "treatments")
+      ) !=
+        0
+    )
+  ) {
+    stop(
+      "the field names for completes should be period_id, months_waited_id and treatments"
+    )
+  }
 
   # incompletes
-  if (length(dplyr::setdiff(names(incompletes), c("period_id", "months_waited_id", "incompletes")) != 0))
-    stop("the field names for incompletes should be period_id, months_waited_id and incompletes")
+  if (
+    length(
+      dplyr::setdiff(
+        names(incompletes),
+        c("period_id", "months_waited_id", "incompletes")
+      ) !=
+        0
+    )
+  ) {
+    stop(
+      "the field names for incompletes should be period_id, months_waited_id and incompletes"
+    )
+  }
 
   # checking dimensions
-  if (nrow(referrals |> dplyr::count(.data$period_id) |> dplyr::filter(.data$n > 1)) > 0)
+  if (
+    nrow(
+      referrals |> dplyr::count(.data$period_id) |> dplyr::filter(.data$n > 1)
+    ) >
+      0
+  ) {
     stop("period_id is repeated in referrals data")
+  }
 
-  if (nrow(completes |> dplyr::count(.data$period_id, .data$months_waited_id) |> dplyr::filter(.data$n > 1)) > 0)
-    stop("repeated combinations of period_id and months_waited_id in completes data")
+  if (
+    nrow(
+      completes |>
+        dplyr::count(.data$period_id, .data$months_waited_id) |>
+        dplyr::filter(.data$n > 1)
+    ) >
+      0
+  ) {
+    stop(
+      "repeated combinations of period_id and months_waited_id in completes data"
+    )
+  }
 
-  if (nrow(incompletes |> dplyr::count(.data$period_id, .data$months_waited_id) |> dplyr::filter(.data$n > 1)) > 0)
-    stop("repeated combinations of period_id and months_waited_id in incompletes data")
+  if (
+    nrow(
+      incompletes |>
+        dplyr::count(.data$period_id, .data$months_waited_id) |>
+        dplyr::filter(.data$n > 1)
+    ) >
+      0
+  ) {
+    stop(
+      "repeated combinations of period_id and months_waited_id in incompletes data"
+    )
+  }
 
-
-  if (nrow(referrals) != length(unique(completes[["period_id"]])))
+  if (nrow(referrals) != length(unique(completes[["period_id"]]))) {
     stop("referrals and completes should have the same number of period_ids")
+  }
 
-  if (!identical(dim(completes), dim(incompletes)))
+  if (!identical(dim(completes), dim(incompletes))) {
     stop("completes and incompletes should have the same dimensions")
+  }
 
   # check for missing time periods within data
   expected_period_ids <- seq(
@@ -113,8 +191,17 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
   )
 
   # check all periods
-  if (length(dplyr::setdiff(expected_period_ids, unique(referrals[["period_id"]]))) > 0)
-    stop("There is a missing period_id from the referrals, completes and incompletes data")
+  if (
+    length(dplyr::setdiff(
+      expected_period_ids,
+      unique(referrals[["period_id"]])
+    )) >
+      0
+  ) {
+    stop(
+      "There is a missing period_id from the referrals, completes and incompletes data"
+    )
+  }
 
   transitions <- calculate_timestep_transitions(
     referrals = referrals,
@@ -136,7 +223,7 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
       by = 1
     )
   ) |>
-  # join onto the reneg_cap tibble
+    # join onto the reneg_cap tibble
     left_join(
       transitions,
       by = join_by(
@@ -146,16 +233,17 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
     ) |>
     mutate(
       reneges = .data$node_inflow -
-        .data$treatments - .data$waiting_same_node
+        .data$treatments -
+        .data$waiting_same_node
     )
-
 
   # redistribute negative reneges in month 0 to referrals if required
   if (isTRUE(redistribute_m0_reneges)) {
     reneg_cap <- reneg_cap |>
       mutate(
         node_inflow = case_when(
-          .data$months_waited_id == 0 & .data$reneges < 0 ~ .data$node_inflow + abs(.data$reneges),
+          .data$months_waited_id == 0 & .data$reneges < 0 ~
+            .data$node_inflow + abs(.data$reneges),
           .default = .data$node_inflow
         ),
         reneges = case_when(
@@ -164,7 +252,6 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
         )
       )
   }
-
 
   # timestep calcs of reneges and capacity parameters
   reneg_cap <- reneg_cap |>
@@ -189,11 +276,23 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
         .by = "months_waited_id"
       )
 
-    if (any(reneg_cap |> pull(.data$renege_param) < 0))
-      warning("negative renege parameters present, investigate raw data")
+    if (!isTRUE(allow_negative_params)) {
+      reneg_cap <- reneg_cap |>
+        mutate(
+          across(
+            c("renege_param", "capacity_param"),
+            \(x) ifelse(x < 0, 0, x)
+          )
+        )
+    }
 
-    if (any(reneg_cap |> pull(.data$capacity_param) < 0))
+    if (any(reneg_cap |> pull(.data$renege_param) < 0)) {
+      warning("negative renege parameters present, investigate raw data")
+    }
+
+    if (any(reneg_cap |> pull(.data$capacity_param) < 0)) {
       warning("negative capacity parameters present, investigate raw data")
+    }
   }
 
   return(reneg_cap)
@@ -260,7 +359,8 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #'   incompletes = incomp,
 #'   completes = comp,
 #'   max_months_waited = max_months,
-#'   redistribute_m0_reneges = TRUE
+#'   redistribute_m0_reneges = TRUE,
+#'   allow_negative_params = FALSE
 #' )
 #'
 #' set.seed(3)
@@ -282,43 +382,70 @@ calibrate_capacity_renege_params <- function(referrals, incompletes, completes,
 #'   renege_capacity_params = params,
 #'   max_months_waited = max_months
 #' )
-apply_params_to_projections <- function(capacity_projections, referrals_projections,
-                                        incomplete_pathways = NULL, renege_capacity_params,
-                                        max_months_waited,
-                                        surplus_treatment_redistribution_method = "evenly") {
-
+apply_params_to_projections <- function(
+  capacity_projections,
+  referrals_projections,
+  incomplete_pathways = NULL,
+  renege_capacity_params,
+  max_months_waited,
+  surplus_treatment_redistribution_method = "evenly"
+) {
   # check lengths of inputs
-  if (length(capacity_projections) != length(referrals_projections))
-    stop("capacity_projections and referrals_projections must be the same length")
+  if (length(capacity_projections) != length(referrals_projections)) {
+    stop(
+      "capacity_projections and referrals_projections must be the same length"
+    )
+  }
 
   # check for negative referrals
-  if (any(referrals_projections < 0))
+  if (any(referrals_projections < 0)) {
     stop("referrals_projections must all be greater or equal to zero")
+  }
 
   # check for negative capacity
-  if (any(capacity_projections < 0))
+  if (any(capacity_projections < 0)) {
     stop("capacity_projections must all be greater or equal to zero")
+  }
 
   # check numeric inputs for max_months_waited
-  if (!is.numeric(max_months_waited))
+  if (!is.numeric(max_months_waited)) {
     stop("max_months_waited must be an integer")
+  }
 
   # check field names
-  if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
-    stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
+  if (
+    length(setdiff(
+      names(renege_capacity_params),
+      c("months_waited_id", "renege_param", "capacity_param")
+    )) >
+      0
+  ) {
+    stop(
+      "renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param"
+    )
+  }
 
   if (!is.null(incomplete_pathways)) {
     # check the number of rows are less than or equal to the number of months
     # waited of interest
     if (nrow(incomplete_pathways) > max_months_waited + 1) {
-      stop("incomplete_pathways must have nrow less than or equal to max_months_waited + 1")
+      stop(
+        "incomplete_pathways must have nrow less than or equal to max_months_waited + 1"
+      )
     }
 
     # check the column headers
-    if (length(dplyr::setdiff(names(incomplete_pathways), c("months_waited_id", "incompletes"))) > 0) {
-      stop("incomplete_pathways must have field names of 'months_waited_id' and 'incompletes'")
+    if (
+      length(dplyr::setdiff(
+        names(incomplete_pathways),
+        c("months_waited_id", "incompletes")
+      )) >
+        0
+    ) {
+      stop(
+        "incomplete_pathways must have field names of 'months_waited_id' and 'incompletes'"
+      )
     }
-
 
     # make sure there is a value for every value of months_waited_id
     all_months_waited <- dplyr::tibble(
@@ -336,7 +463,6 @@ apply_params_to_projections <- function(capacity_projections, referrals_projecti
           0
         )
       )
-
   } else {
     incomplete_pathways <- all_months_waited |>
       mutate(

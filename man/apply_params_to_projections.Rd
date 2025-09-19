@@ -80,7 +80,8 @@ params <- calibrate_capacity_renege_params(
   incompletes = incomp,
   completes = comp,
   max_months_waited = max_months,
-  redistribute_m0_reneges = TRUE
+  redistribute_m0_reneges = TRUE,
+  allow_negative_params = FALSE
 )
 
 set.seed(3)

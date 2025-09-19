@@ -20,7 +20,7 @@ get_rtt_data(
 \arguments{
 \item{url}{string; url of the NHS Referral to Treatment (RTT) Waiting Times}
 
-\item{date_start}{date; start date (earliest date is 1st April 2016, but the
+\item{date_start}{date; start date (earliest date is 1st May 2016, but the
 default is 1st April 2019)}
 
 \item{date_end}{date; end date (defaults to "today")}
