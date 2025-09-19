@@ -15,7 +15,7 @@ waiting list size, given a treatment capacity in the first month
 
     <a class="navbar-brand me-2" href="../index.html">NHSRtt</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,7 +56,7 @@ waiting list size, given a treatment capacity in the first month
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">find_p</span><span class="op">(</span></span>
-<span>  target_time <span class="op">=</span> <span class="fl">18</span><span class="op">/</span><span class="fl">4.35</span>,</span>
+<span>  target_time <span class="op">=</span> <span class="fl">4</span> <span class="op">+</span> <span class="op">(</span><span class="fl">68</span><span class="op">/</span><span class="fl">487</span><span class="op">)</span>,</span>
 <span>  <span class="va">renege_params</span>,</span>
 <span>  <span class="va">mu_1</span>,</span>
 <span>  p1_lower <span class="op">=</span> <span class="fl">0.1</span>,</span>
@@ -74,7 +74,7 @@ waiting list size, given a treatment capacity in the first month
 
 <dl><dt id="arg-target-time">target_time<a class="anchor" aria-label="anchor" href="#arg-target-time"></a></dt>
 <dd><p>numeric of length 1; the target waiting time,
-in weeks, to achieve the specified percentile.</p></dd>
+in months, to achieve the specified percentile.</p></dd>
 
 
 <dt id="arg-renege-params">renege_params<a class="anchor" aria-label="anchor" href="#arg-renege-params"></a></dt>
@@ -99,7 +99,7 @@ Must be between 0 and 1 and more than  <code>p1_lower</code>. Defaults to 0.85.<
 
 <dt id="arg-tolerance">tolerance<a class="anchor" aria-label="anchor" href="#arg-tolerance"></a></dt>
 <dd><p>numeric of length 1; tolerance for the binary search stopping
-criterion. The unit is weeks.</p></dd>
+criterion. The unit is months.</p></dd>
 
 
 <dt id="arg-referrals">referrals<a class="anchor" aria-label="anchor" href="#arg-referrals"></a></dt>
@@ -137,9 +137,11 @@ search for a valid result</p></dd>
  <dt>niterations</dt>
 <dd><p>The number
   of iterations performed in the binary search.</p></dd>
-</dl><p>Where there are NAs included
-  in the results, this indicates that a solution couldn't be found.</p>
-    </div>
+ <dt>status</dt>
+<dd><p>Converged indicates a
+  solution was found, and Not converged indicates no solution was found</p></dd>
+
+</dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The function repeatedly uses the removals table (from <code><a href="initialise_removals.html">initialise_removals()</a></code>)
@@ -158,7 +160,7 @@ search for a valid result</p></dd>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">find_p</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  target_time <span class="op">=</span> <span class="fl">18</span> <span class="op">/</span> <span class="fl">4.35</span>,</span></span>
+<span class="r-in"><span>  target_time <span class="op">=</span> <span class="fl">4</span> <span class="op">+</span> <span class="op">(</span><span class="fl">68</span> <span class="op">/</span> <span class="fl">487</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  renege_params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.04</span>, <span class="fl">0.04</span>, <span class="fl">0.03</span>, <span class="fl">0.01</span>, <span class="fl">0.02</span>, <span class="fl">0.02</span>, <span class="fl">0.01</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  mu_1 <span class="op">=</span> <span class="fl">2651.227</span>,</span></span>
 <span class="r-in"><span>  p1_lower <span class="op">=</span> <span class="fl">0.1</span>,</span></span>
@@ -168,29 +170,32 @@ search for a valid result</p></dd>
 <span class="r-in"><span>  percentile <span class="op">=</span> <span class="fl">0.92</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $p1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.8199707</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.8200623</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $time_p</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 4.137243</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 4.139275</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $mu</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 10833</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 10836.18</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $wlsize</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 24625</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 24630.12</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $waiting_list</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   months_waited_id    r service sigma wlsize</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1                0 0.04    2651  2651   8869</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2                1 0.04    2174  2174   6340</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3                2 0.03    1783  1783   4366</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4                3 0.01    1462  1462   2860</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5                4 0.02    1199  1199   1603</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6                5 0.02     983   983    587</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7                6 0.01    4350   581      0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   months_waited_id    r   service     sigma    wlsize</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                0 0.04 2651.2270 2651.2270 8868.7730</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                1 0.04 2174.1712 2174.1712 6339.8509</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                2 0.03 1782.9557 1782.9557 4366.6996</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4                3 0.01 1462.1347 1462.1347 2860.8979</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5                4 0.02 1199.0415 1199.0415 1604.6385</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6                5 0.02  983.2887  983.2887  589.2571</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7                6 0.01 4377.9222  583.3645    0.0000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $niterations</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $status</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Converged"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>

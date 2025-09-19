@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">NHSRtt</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -737,10 +737,9 @@ referrals. This is done by setting the
 <span>  redistribute_m0_reneges <span class="op">=</span> <span class="cn">FALSE</span>, </span>
 <span>  <span class="co"># full_breakdown can be set to TRUE to see all the transitions for all months</span></span>
 <span>  <span class="co"># waited at each time step</span></span>
-<span>  full_breakdown <span class="op">=</span> <span class="cn">FALSE</span> </span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in calibrate_capacity_renege_params(referrals = referrals, completes =</span></span>
-<span><span class="co">#&gt; completes, : negative renege parameters present, investigate raw data</span></span></code></pre></div>
+<span>  full_breakdown <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  allow_negative_params <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <caption>The structure of the output from the
 <code><a href="../reference/calibrate_capacity_renege_params.html">calibrate_capacity_renege_params()</a></code> function.</caption>
@@ -752,7 +751,7 @@ referrals. This is done by setting the
 <tbody>
 <tr class="odd">
 <td align="right">0</td>
-<td align="right">-0.0544636</td>
+<td align="right">0.0000000</td>
 <td align="right">0.2403923</td>
 </tr>
 <tr class="even">
@@ -986,10 +985,10 @@ of stocks at each time step.</p>
 <caption>Example of the outputs from the
 <code><a href="../reference/apply_params_to_projections.html">apply_params_to_projections()</a></code> function.</caption>
 <colgroup>
-<col width="13%">
+<col width="14%">
 <col width="23%">
 <col width="30%">
-<col width="15%">
+<col width="14%">
 <col width="16%">
 </colgroup>
 <thead><tr class="header">
@@ -1004,8 +1003,8 @@ of stocks at each time step.</p>
 <td align="right">1</td>
 <td align="right">0</td>
 <td align="right">8383.8462</td>
-<td align="right">-2045.9795</td>
-<td align="right">31228.133</td>
+<td align="right">0.0000</td>
+<td align="right">29182.154</td>
 </tr>
 <tr class="even">
 <td align="right">1</td>
@@ -1094,51 +1093,51 @@ of stocks at each time step.</p>
 <tr class="even">
 <td align="right">2</td>
 <td align="right">0</td>
-<td align="right">8735.6236</td>
-<td align="right">-2156.2138</td>
-<td align="right">33010.590</td>
+<td align="right">8797.5131</td>
+<td align="right">0.0000</td>
+<td align="right">30792.487</td>
 </tr>
 <tr class="odd">
 <td align="right">2</td>
 <td align="right">1</td>
-<td align="right">2343.3414</td>
-<td align="right">1217.2746</td>
-<td align="right">27667.517</td>
+<td align="right">2205.3264</td>
+<td align="right">1137.5222</td>
+<td align="right">25839.305</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="right">2</td>
-<td align="right">1505.6511</td>
+<td align="right">1516.3182</td>
 <td align="right">1199.5531</td>
-<td align="right">24115.765</td>
+<td align="right">24105.098</td>
 </tr>
 <tr class="odd">
 <td align="right">2</td>
 <td align="right">3</td>
-<td align="right">1387.6629</td>
+<td align="right">1397.4941</td>
 <td align="right">1219.2314</td>
-<td align="right">22254.241</td>
+<td align="right">22244.410</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="right">4</td>
-<td align="right">1162.2201</td>
+<td align="right">1170.4541</td>
 <td align="right">2245.7107</td>
-<td align="right">18407.215</td>
+<td align="right">18398.981</td>
 </tr>
 <tr class="odd">
 <td align="right">2</td>
 <td align="right">5</td>
-<td align="right">892.5762</td>
+<td align="right">898.8999</td>
 <td align="right">1339.3560</td>
-<td align="right">15725.222</td>
+<td align="right">15718.898</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="right">6</td>
-<td align="right">691.7044</td>
+<td align="right">696.6050</td>
 <td align="right">977.8493</td>
-<td align="right">12027.626</td>
+<td align="right">12022.726</td>
 </tr>
 </tbody>
 </table>
@@ -1191,7 +1190,7 @@ this.</p>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">mean_absolute_percentage_error</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mape</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.05386989</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.04658936</span></span></code></pre></div>
 <p>The mean absolute error (mae) can also be calculated:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mae</span> <span class="op">&lt;-</span> <span class="va">observed_incompletes</span> <span class="op">|&gt;</span> </span>
@@ -1214,9 +1213,9 @@ this.</p>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">mean_absolute_error</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mae</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 766.6082</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 613.1636</span></span></code></pre></div>
 <p>The mean absolute percentage error for the modelled parameters is
-5.4% and the mean absolute error is 766.6.</p>
+4.7% and the mean absolute error is 613.2.</p>
 </div>
 <div class="section level2">
 <h2 id="future-scenarios">Future scenarios<a class="anchor" aria-label="anchor" href="#future-scenarios"></a>
@@ -1540,7 +1539,7 @@ each other.</p>
 <tr class="odd">
 <td align="right">20</td>
 <td align="right">0</td>
-<td align="right">27807.619</td>
+<td align="right">26004.634</td>
 <td align="left">Scenario 1</td>
 </tr>
 <tr class="even">
