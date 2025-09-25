@@ -1,3 +1,7 @@
+# NHSRtt 0.4.0
+
+* Includes linear programming solution to steady state optimisation problem
+
 # NHSRtt 0.3.1
 
 * Makes Duchy Hospital names unique

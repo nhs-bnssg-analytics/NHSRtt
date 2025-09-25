@@ -347,18 +347,19 @@ test_that("Function returns a converged solution within tolerance", {
     0.122065490059333,
     0.298600354859636
   )
-  tt <- 1000
+  refs <- 1280
+  targ <- 1 - (1000 / refs)
   result <- optimise_steady_state(
-    referrals = 1280,
-    target = tt,
-    method = "treatments",
+    referrals = refs,
+    target = targ,
+    method = "bs",
     renege_params = renege_params
   )
 
   expect_type(result, "list")
   expect_equal(result$status, "Converged")
-  expect_equal(result$method, "Within tolerance of target mu")
-  expect_true(abs(result$mu - tt) <= tt * 0.05)
+  expect_equal(result$solution_method, "Within tolerance of target mu")
+  expect_true(abs(1 - (result$mu / refs) - targ) <= targ * 0.05)
 })
 
 test_that("Function returns a converged solution in the second pass when searching back to the previously identified solution", {
@@ -377,66 +378,33 @@ test_that("Function returns a converged solution in the second pass when searchi
     0.122065490059333,
     0.298600354859636
   )
-
-  tt <- 900
+  refs <- 1280
+  targ <- 1 - (900 / refs)
   result <- optimise_steady_state(
-    referrals = 1280,
-    target = tt,
-    method = "treatments",
+    referrals = refs,
+    target = targ,
+    method = "bs",
     renege_params = renege_params
   )
 
   expect_type(result, "list")
   expect_equal(result$status, "Converged")
   expect_equal(
-    result$method,
+    result$solution_method,
     "Between target mu and identified converged value"
   )
-  expect_true(abs(result$mu - tt) > tt * 0.05)
+  expect_true(abs(1 - (result$mu / refs) - targ) > targ * 0.05)
 })
 
-# test_that("Function returns a converged solution in the third pass within the broader range of attempted mus", {
-#   renege_params <- c(
-#     0,
-#     0,
-#     0.130609994893718,
-#     0.170839597237991,
-#     0.0816899205064605,
-#     0.184743485054583,
-#     0.212512806928513,
-#     0.145062630281234,
-#     0.0887476040042307,
-#     0.0866681597837429,
-#     0.0962470429106841,
-#     0.122065490059333,
-#     0.298600354859636
-#   )
-
-#   tt <- 500
-#   result <- optimise_steady_state(
-#     referrals = 1280,
-#     target = tt,
-#     method = "treatments",
-#     renege_params = renege_params
-#   )
-
-#   expect_type(result, "list")
-#   expect_equal(result$status, "Converged")
-#   expect_equal(
-#     result$method,
-#     "Between target mu and identified converged value"
-#   )
-#   expect_true(abs(result$mu - tt) > tt * 0.05)
-# })
 
 test_that("Function returns doesn't identify a satisfactory solution", {
   renege_params <- rep(1, 6)
-
-  tt <- 950
+  refs <- 1000
+  targ <- 1 - (950 / refs)
   result <- optimise_steady_state(
-    referrals = 1000,
-    target = tt,
-    method = "treatments",
+    referrals = refs,
+    target = targ,
+    method = "bs",
     renege_params = renege_params,
     percentile = 0.99,
     target_time = 1
@@ -445,7 +413,7 @@ test_that("Function returns doesn't identify a satisfactory solution", {
   expect_type(result, "list")
   expect_equal(result$status, NA)
   expect_equal(
-    result$method,
+    result$solution_method,
     "No solution identified"
   )
 })
@@ -458,13 +426,13 @@ test_that("Function errors", {
     0.13,
     0.17
   )
-
-  tt <- 1000
+  refs <- 1280
+  targ <- 1 - (1000 / refs)
   expect_error(
     optimise_steady_state(
       referrals = "1280",
-      target = tt,
-      method = "treatments",
+      target = targ,
+      method = "bs",
       renege_params = renege_params
     ),
     "referrals must be numeric"
@@ -472,9 +440,9 @@ test_that("Function errors", {
 
   expect_error(
     optimise_steady_state(
-      referrals = c(1234, 1234),
-      target = tt,
-      method = "treatments",
+      referrals = c(refs, refs),
+      target = targ,
+      method = "bs",
       renege_params = renege_params
     ),
     "referrals must be length 1"
@@ -482,9 +450,9 @@ test_that("Function errors", {
 
   expect_error(
     optimise_steady_state(
-      referrals = 1280,
+      referrals = refs,
       target = "1000",
-      method = "treatments",
+      method = "bs",
       renege_params = renege_params
     ),
     "target must be numeric"
@@ -492,26 +460,16 @@ test_that("Function errors", {
 
   expect_error(
     optimise_steady_state(
-      referrals = 1280,
-      target = c(tt, tt),
-      method = "treatments",
+      referrals = refs,
+      target = c(targ, targ),
+      method = "bs",
       renege_params = renege_params
     ),
     "target must be length 1"
   )
-
-  expect_snapshot(
-    optimise_steady_state(
-      referrals = 1280,
-      target = tt,
-      method = "method",
-      renege_params = renege_params
-    ),
-    error = TRUE
-  )
 })
 
-# using method = "renege_rates"
+# using method = "lp"
 
 test_that("Function returns a converged solution within tolerance", {
   renege_params <- c(
@@ -531,50 +489,85 @@ test_that("Function returns a converged solution within tolerance", {
   )
   rr <- 0.15
   refs <- 1280
+
+  set.seed(12)
+  s_given <- runif(length(renege_params))
+  s_given <- s_given / sum(s_given)
+
   result <- optimise_steady_state(
     referrals = refs,
     target = rr,
-    method = "renege_rates",
-    renege_params = renege_params
+    method = "lp",
+    renege_params = renege_params,
+    s_given = s_given
   )
 
   expect_type(result, "list")
   expect_equal(result$status, "Converged")
-  expect_equal(result$method, "Within tolerance of target mu")
+  expect_equal(result$solution_method, "Linear programming exact solution")
   expect_true(rr - ((refs - result$mu) / refs) <= rr * 0.05)
+
+  # 3 checks
+  # arrivals == departures
+  reneges <- sum(
+    result$waiting_list$r[2:length(result$waiting_list$r)] *
+      result$waiting_list$wlsize[1:length(result$waiting_list$wlsize) - 1]
+  ) +
+    (result$waiting_list$r[1] * refs)
+
+  treatments <- sum(result$waiting_list$sigma)
+  expect_equal(reneges + treatments - refs, 0)
+
+  # target achieved
+  expect_equal(
+    hist_percentile_calc(result$waiting_list, percentile = 0.92) -
+      result$time_p,
+    0
+  )
+
+  # renege rates
+  expect_equal(rr - (reneges / (reneges + treatments)), 0, tolerance = 0.000001)
+
+  expect_error(
+    optimise_steady_state(
+      referrals = refs,
+      target = rr,
+      method = "lp",
+      renege_params = renege_params
+    ),
+    "s_given cannot be NULL"
+  )
 })
 
-# test_that("Function returns a converged solution in the third pass within the broader range of attempted mus", {
-#   renege_params <- c(
-#     0,
-#     0,
-#     0.130609994893718,
-#     0.170839597237991,
-#     0.0816899205064605,
-#     0.184743485054583,
-#     0.212512806928513,
-#     0.145062630281234,
-#     0.0887476040042307,
-#     0.0866681597837429,
-#     0.0962470429106841,
-#     0.122065490059333,
-#     0.298600354859636
-#   )
+test_that("calc_gamma returns correct vector for integer target_time", {
+  expect_equal(calc_gamma(3, 5), c(1, 1, 1, 0, 0))
+})
 
-#   rr <- 0.42
-#   refs <- 1280
-#   result <- optimise_steady_state(
-#     referrals = refs,
-#     target = rr,
-#     method = "renege_rates",
-#     renege_params = renege_params
-#   )
+test_that("calc_gamma returns correct vector for fractional target_time", {
+  expect_equal(calc_gamma(2.5, 5), c(1, 1, 0.5, 0, 0))
+})
 
-#   expect_type(result, "list")
-#   expect_equal(result$status, "Converged")
-#   expect_equal(
-#     result$method,
-#     "Solution identified from broader mus"
-#   )
-#   expect_false(abs(result$mu - tt) > tt * 0.05)
-# })
+test_that("calc_gamma returns correct vector when target_time equals n_months", {
+  expect_equal(calc_gamma(5, 5), c(1, 1, 1, 1, 1))
+})
+
+test_that("calc_gamma returns correct vector when target_time is zero", {
+  expect_equal(calc_gamma(0, 3), c(0, 0, 0))
+})
+
+test_that("calc_gamma returns correct vector when target_time is fractional and close to n_months", {
+  expect_equal(calc_gamma(4.75, 5), c(1, 1, 1, 1, 0.75))
+})
+
+test_that("calc_gamma throws error when target_time > n_months", {
+  expect_error(
+    calc_gamma(6, 5),
+    "target_time must be less than or equal to n_months"
+  )
+})
+
+test_that("calc_gamma returns numeric vector of correct length", {
+  result <- calc_gamma(2.3, 6)
+  expect_type(result, "double")
+  expect_length(result, 6)
+})
