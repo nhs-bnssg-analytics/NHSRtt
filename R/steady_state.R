@@ -382,8 +382,8 @@ find_p <- function(
 #'   value
 #' @noRd
 calc_gamma <- function(target_time, n_months) {
-  if (target_time > n_months) {
-    stop("target_time must be less than or equal to n_months")
+  if (target_time >= n_months) {
+    stop("target_time must be less than n_months")
   }
   ones <- floor(target_time)
   fraction <- target_time %% 1

@@ -60,13 +60,10 @@ A list containing:
   \item{method}{The method the solution was identified.}
 }
 \description{
-This function performs a binary search to identify a treatment capacity or
-  renege rate that solves the steady state criteria closest to a specified target
-  treatment capacity `mu` or renege rate. It uses the `find_p()` function to evaluate
-  system convergence and iteratively adjusts `mu_1` until the solution is within a
-  defined tolerance or the maximum number of iterations is reached. If convergence is
-  not achieved, the function performs secondary searches to identify the best available
-  steady-state solution.
+This function performs either a linear programming or binary search method
+  to identify a solution that satisies multiple constraints (1, arrivals = departures,
+  2, percentile on waiting list waiting within given time is equal to given value, 3,
+  renege rate is equal to given value)
 }
 \examples{
 \dontrun{

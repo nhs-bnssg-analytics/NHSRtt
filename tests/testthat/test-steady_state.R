@@ -547,9 +547,6 @@ test_that("calc_gamma returns correct vector for fractional target_time", {
   expect_equal(calc_gamma(2.5, 5), c(1, 1, 0.5, 0, 0))
 })
 
-test_that("calc_gamma returns correct vector when target_time equals n_months", {
-  expect_equal(calc_gamma(5, 5), c(1, 1, 1, 1, 1))
-})
 
 test_that("calc_gamma returns correct vector when target_time is zero", {
   expect_equal(calc_gamma(0, 3), c(0, 0, 0))
@@ -562,7 +559,7 @@ test_that("calc_gamma returns correct vector when target_time is fractional and 
 test_that("calc_gamma throws error when target_time > n_months", {
   expect_error(
     calc_gamma(6, 5),
-    "target_time must be less than or equal to n_months"
+    "target_time must be less than n_months"
   )
 })
 
