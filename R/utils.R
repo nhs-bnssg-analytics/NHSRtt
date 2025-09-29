@@ -1,6 +1,5 @@
 # url processing ----------------------------------------------------------
 
-
 #' Identify links within a given url
 #'
 #' @param url string; url of interest to identify the urls within
@@ -45,7 +44,9 @@ extract_monyr <- function(x) {
     as.numeric()
 
   monyr <- substr(
-    x, start_character, start_character + 4
+    x,
+    start_character,
+    start_character + 4
   )
 
   return(monyr)
@@ -89,7 +90,6 @@ download_unzip_files <- function(zip_url) {
 
 # data processing ---------------------------------------------------------
 
-
 #' Removes the first few rows of data if they don't belong to table (eg, they
 #' have rows of NAs in the source file)
 #'
@@ -99,13 +99,18 @@ download_unzip_files <- function(zip_url) {
 #' @noRd
 chop_top_off_data <- function(data) {
   if (all(grepl("V", names(data)))) {
-    final_na_row <- max(
-      match(NA, data$V1)
-    )
+    na_positions <- which(is.na(data$V1))
+
+    if (length(na_positions) == 0) {
+      final_na_row <- 0
+    } else {
+      final_na_row <- max(na_positions)
+    }
+
     new_names <- data[final_na_row + 1, ] |>
       as.character()
 
-    data <- data[-seq_len(final_na_row + 1),] |>
+    data <- data[-seq_len(final_na_row + 1), ] |>
       setNames(nm = new_names) |>
       mutate(
         across(
@@ -113,7 +118,6 @@ chop_top_off_data <- function(data) {
           as.numeric
         )
       )
-
   }
   return(data)
 }
@@ -147,14 +151,15 @@ make_period_field <- function(data) {
   period <- unique(data[[period_name]])
 
   if ("Year" %in% nms) {
-
     yr <- as.numeric(
       substr(unique(data[["Year"]]), 1, 4)
     )
 
     mnth <- match(tolower(period), tolower(month.name))
 
-    if (mnth < 4) yr <- yr + 1
+    if (mnth < 4) {
+      yr <- yr + 1
+    }
 
     final_period <- as.Date(
       paste(
@@ -227,7 +232,8 @@ month_attribution_lkp <- function(week_end_dates) {
         .data$wait_start_month == "month_1" ~
           lubridate::floor_date(.data$week_end, unit = "months"),
         .default = lubridate::floor_date(
-          .data$week_end %m-% months(1), unit = "months"
+          .data$week_end %m-% months(1),
+          unit = "months"
         ),
       )
     ) |>
@@ -237,7 +243,6 @@ month_attribution_lkp <- function(week_end_dates) {
     )
 
   return(all_dates)
-
 }
 
 
@@ -273,7 +278,12 @@ month_attribution_lkp <- function(week_end_dates) {
 #'   waiting_same_node and treatments. These represent all the counts being
 #'   moved on a single time step
 #'
-calculate_timestep_transitions <- function(referrals, incompletes, completes, max_months_waited) {
+calculate_timestep_transitions <- function(
+  referrals,
+  incompletes,
+  completes,
+  max_months_waited
+) {
   # inflows at each time step (period) are a combination of referrals in the
   # period and incomplete counts from the previous time step
 
@@ -339,7 +349,6 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
       )
     )
 
-
   return(transitions)
 }
 
@@ -350,7 +359,6 @@ calculate_timestep_transitions <- function(referrals, incompletes, completes, ma
 #' @param incomplete_counts numeric; vector of incomplete counts for a bin for a
 #'   period
 redistribute_incompletes_evenly <- function(incomplete_counts) {
-
   if (sum(incomplete_counts) < 0) {
     # force the negatives to 0
     incomplete_counts <- rep(0, length(incomplete_counts))
@@ -373,7 +381,6 @@ redistribute_incompletes_evenly <- function(incomplete_counts) {
       # adjust positive stocks to account for negative incompletes
       incomplete_counts[incomplete_counts > 0] <-
         incomplete_counts[incomplete_counts > 0] + adjustment
-
     }
   }
   return(incomplete_counts)
@@ -387,7 +394,6 @@ redistribute_incompletes_evenly <- function(incomplete_counts) {
 #'   pathway within a bin in a period in order of lowest to highest bin
 #'
 redistribute_incompletes_optimally <- function(incomplete_counts) {
-
   # reallocate surplus treatments to highest bins that still require treatment
 
   # calculate total surplus treatments
@@ -409,7 +415,6 @@ redistribute_incompletes_optimally <- function(incomplete_counts) {
         # adjust the number of surplus_treatments
         surplus_treatments <- surplus_treatments - n_treatments
       }
-
     }
 
     # proportionally redistribute the remaining surplus to the bins that
@@ -435,13 +440,15 @@ redistribute_incompletes_optimally <- function(incomplete_counts) {
 #' @param redistribution_method string; one of "none", "evenly" or
 #'   "prioritise_long_waiters"
 #'
-calculate_incompletes <- function(inflow, reneges, treatments, redistribution_method) {
-
+calculate_incompletes <- function(
+  inflow,
+  reneges,
+  treatments,
+  redistribution_method
+) {
   redistribution_method <- match.arg(
     redistribution_method,
-    c("none",
-      "evenly",
-      "prioritise_long_waiters")
+    c("none", "evenly", "prioritise_long_waiters")
   )
 
   incompletes <- inflow - treatments - reneges
@@ -461,7 +468,6 @@ calculate_incompletes <- function(inflow, reneges, treatments, redistribution_me
 #' @param x vector of values between 0 and 1 representing the quantile
 #' @noRd
 weibull_sample <- function(x) {
-
   distribution_curve <- stats::rweibull(100, shape = 0.95, scale = 1) |>
     stats::quantile(1 - x)
 
@@ -507,23 +513,31 @@ weibull_sample <- function(x) {
 #'   params = c(0.03, 0.02, 0.02, 0.01, 0.04, 0.05),
 #'   skew = 1.05
 #' )
-apply_parameter_skew <- function(params, skew, skew_method = "rotate", pivot_bin = NULL) {
-
+apply_parameter_skew <- function(
+  params,
+  skew,
+  skew_method = "rotate",
+  pivot_bin = NULL
+) {
   # check params is numeric
-  if (!is.numeric(params))
+  if (!is.numeric(params)) {
     stop("params must be numeric")
+  }
 
   # check skew is numeric
-  if (!is.numeric(skew))
+  if (!is.numeric(skew)) {
     stop("skew must be numeric")
+  }
 
   # check skew is length 1
-  if (length(skew) != 1)
+  if (length(skew) != 1) {
     stop("skew must be length 1")
+  }
 
   # check skew is not negative
-  if (skew <= 0)
+  if (skew <= 0) {
     stop("skew must be greater than 0")
+  }
 
   # check skew_method input
   skew_method <- match.arg(
@@ -533,7 +547,9 @@ apply_parameter_skew <- function(params, skew, skew_method = "rotate", pivot_bin
 
   params_length <- length(params)
 
-  if (params_length <= 2) return(params)
+  if (params_length <= 2) {
+    return(params)
+  }
 
   if (is.null(pivot_bin)) {
     pivot_bin <- (params_length / 2)
@@ -543,9 +559,12 @@ apply_parameter_skew <- function(params, skew, skew_method = "rotate", pivot_bin
   pivot_bin <- pivot_bin + 1
 
   if (skew_method == "rotate") {
-
-    rotate_func <- function(bottom_bin, top_bin, skew, location_relative_to_pivot) {
-
+    rotate_func <- function(
+      bottom_bin,
+      top_bin,
+      skew,
+      location_relative_to_pivot
+    ) {
       if (location_relative_to_pivot == "above_pivot") {
         skew_vals <- c(1, skew)
 
@@ -588,13 +607,16 @@ apply_parameter_skew <- function(params, skew, skew_method = "rotate", pivot_bin
       location_relative_to_pivot = "above_pivot"
     )
 
-    if (pivot_bin %% 1 == 0) above_pivot_multipliers <- above_pivot_multipliers[-1]
+    if (pivot_bin %% 1 == 0) {
+      above_pivot_multipliers <- above_pivot_multipliers[-1]
+    }
 
-    params_out <- params * c(1, below_pivot_multipliers, above_pivot_multipliers)
-
+    params_out <- params *
+      c(1, below_pivot_multipliers, above_pivot_multipliers)
   } else if (skew_method == "uniform") {
-
-    if (pivot_bin %% 1 != 0) pivot_bin <- ceiling(pivot_bin)
+    if (pivot_bin %% 1 != 0) {
+      pivot_bin <- ceiling(pivot_bin)
+    }
 
     params_temp <- params
     params_temp[2:(pivot_bin - 1)] <-
@@ -632,7 +654,11 @@ convert_months_waited_to_id <- function(months_waited, max_months_waited) {
   months_waited[grepl("^<", months_waited)] <- "0"
 
   # change ">x" to "x"
-  months_waited[grepl("^>", months_waited)] <- gsub(">", "", months_waited[grepl("^>", months_waited)])
+  months_waited[grepl("^>", months_waited)] <- gsub(
+    ">",
+    "",
+    months_waited[grepl("^>", months_waited)]
+  )
 
   # replace all values with the first numeric value, eg, "10-11" will become 10
   months_waited <- as.numeric(

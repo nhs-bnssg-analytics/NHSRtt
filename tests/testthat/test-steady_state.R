@@ -471,7 +471,7 @@ test_that("Function errors", {
 
 # using method = "lp"
 
-test_that("Function returns a converged solution within tolerance", {
+test_that("Function returns a solution for the lp method", {
   renege_params <- c(
     0,
     0,
@@ -524,21 +524,102 @@ test_that("Function returns a converged solution within tolerance", {
       result$time_p,
     0
   )
-
-  # renege rates
-  expect_equal(rr - (reneges / (reneges + treatments)), 0, tolerance = 0.000001)
-
-  expect_error(
-    optimise_steady_state(
-      referrals = refs,
-      target = rr,
-      method = "lp",
-      renege_params = renege_params
-    ),
-    "s_given cannot be NULL"
-  )
 })
 
+test_that("Function returns a solution for the lp method at a second pass", {
+  renege_params <- c(
+    0,
+    0,
+    0.130609994893718,
+    0.170839597237991,
+    0.0816899205064605,
+    0.184743485054583,
+    0.212512806928513,
+    0.145062630281234,
+    0.0887476040042307,
+    0.0866681597837429,
+    0.0962470429106841,
+    0.122065490059333,
+    0.298600354859636
+  )
+  rr <- 0.8
+  refs <- 1280
+
+  set.seed(12)
+  s_given <- runif(length(renege_params))
+  s_given <- s_given / sum(s_given)
+
+  result <- optimise_steady_state(
+    referrals = refs,
+    target = rr,
+    method = "lp",
+    renege_params = renege_params,
+    s_given = s_given
+  )
+
+  expect_type(result, "list")
+  expect_equal(result$status, "Converged")
+  expect_equal(result$solution_method, "Linear programming nearest solution")
+
+  # 3 checks
+  # arrivals == departures
+  reneges <- sum(
+    result$waiting_list$r[2:length(result$waiting_list$r)] *
+      result$waiting_list$wlsize[1:length(result$waiting_list$wlsize) - 1]
+  ) +
+    (result$waiting_list$r[1] * refs)
+
+  treatments <- sum(result$waiting_list$sigma)
+  expect_equal(reneges + treatments - refs, 0)
+
+  # target achieved
+  expect_equal(
+    hist_percentile_calc(result$waiting_list, percentile = 0.92) -
+      result$time_p,
+    0,
+    tolerance = 0.000001
+  )
+
+  # renege rates
+  expect_true(rr - ((refs - result$mu) / refs) != rr)
+})
+
+
+test_that("Function returns a solution for the lp method at a second pass", {
+  renege_params <- c(
+    0,
+    0,
+    0.130609994893718,
+    0.170839597237991,
+    0.0816899205064605,
+    0.184743485054583,
+    0.212512806928513,
+    0.145062630281234,
+    0.0887476040042307,
+    0.0866681597837429,
+    0.0962470429106841,
+    0.122065490059333,
+    0.298600354859636
+  )
+  rr <- 0
+  refs <- 1280
+
+  set.seed(12)
+  s_given <- runif(length(renege_params))
+  s_given <- s_given / sum(s_given)
+
+  result <- optimise_steady_state(
+    referrals = refs,
+    target = 0,
+    method = "lp",
+    renege_params = renege_params,
+    s_given = s_given
+  )
+  expect_equal(
+    result$status,
+    "Not converged"
+  )
+})
 test_that("calc_gamma returns correct vector for integer target_time", {
   expect_equal(calc_gamma(3, 5), c(1, 1, 1, 0, 0))
 })

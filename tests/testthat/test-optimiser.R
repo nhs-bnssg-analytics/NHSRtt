@@ -1,9 +1,20 @@
 test_that("optimise_capacity errors", {
-
   params <- dplyr::tibble(
     months_waited_id = c(0L, 1L, 2L, 3L, 4L),
-    renege_param = c(0.373061815, 0.463521759, 0.086835849, 0.079501717, 0.068946943),
-    capacity_param = c(0.029854199, 0.025546583, 0.043484007, 0.043833252, 0.04433586)
+    renege_param = c(
+      0.373061815,
+      0.463521759,
+      0.086835849,
+      0.079501717,
+      0.068946943
+    ),
+    capacity_param = c(
+      0.029854199,
+      0.025546583,
+      0.043484007,
+      0.043833252,
+      0.04433586
+    )
   )
 
   max_months <- 4
@@ -32,7 +43,6 @@ test_that("optimise_capacity errors", {
       incompletes = mean(.data$incompletes),
       .by = "months_waited_id"
     )
-
 
   expect_error(
     optimise_capacity(
@@ -119,7 +129,6 @@ test_that("optimise_capacity errors", {
     info = "target_bin is higher than what is in the data"
   )
 
-
   expect_error(
     optimise_capacity(
       t_1_capacity = future_capacity,
@@ -134,7 +143,6 @@ test_that("optimise_capacity errors", {
     "incomplete_pathways must have field names of 'months_waited_id' and 'incompletes'",
     info = "correct field names for incomplete_pathways"
   )
-
 
   expect_error(
     optimise_capacity(
@@ -222,11 +230,22 @@ test_that("optimise_capacity errors", {
 })
 
 test_that("optimise_capacity functionality", {
-
   params <- dplyr::tibble(
     months_waited_id = c(0L, 1L, 2L, 3L, 4L),
-    renege_param = c(0.373061815, 0.463521759, 0.086835849, 0.079501717, 0.068946943),
-    capacity_param = c(0.029854199, 0.025546583, 0.043484007, 0.043833252, 0.04433586)
+    renege_param = c(
+      0.373061815,
+      0.463521759,
+      0.086835849,
+      0.079501717,
+      0.068946943
+    ),
+    capacity_param = c(
+      0.029854199,
+      0.025546583,
+      0.043484007,
+      0.043833252,
+      0.04433586
+    )
   )
 
   max_months <- 4
@@ -285,17 +304,26 @@ test_that("optimise_capacity functionality", {
     "Unable to optimise as no treatments in the calibration period",
     info = "No treatments in calibration period prevents optimisation ability"
   )
-
-
 })
 
 
 test_that("optimise_capacity functionality", {
-
   params <- dplyr::tibble(
     months_waited_id = c(0L, 1L, 2L, 3L, 4L),
-    renege_param = c(0.373061815, 0.463521759, 0.086835849, 0.079501717, 0.068946943),
-    capacity_param = c(0.029854199, 0.025546583, 0.043484007, 0.043833252, 0.04433586)
+    renege_param = c(
+      0.373061815,
+      0.463521759,
+      0.086835849,
+      0.079501717,
+      0.068946943
+    ),
+    capacity_param = c(
+      0.029854199,
+      0.025546583,
+      0.043484007,
+      0.043833252,
+      0.04433586
+    )
   )
 
   max_months <- 4

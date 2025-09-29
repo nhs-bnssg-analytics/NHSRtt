@@ -547,8 +547,7 @@ optimise_steady_state <- function(
           percentile = percentile
         )
 
-        percentile_achieved <- round(lp_out$solution_time, 5) ==
-          round(target_time, 5)
+        percentile_achieved <- round(lp_out$time_p, 5) == round(target_time, 5)
 
         target <- target - theta_increment
       }
