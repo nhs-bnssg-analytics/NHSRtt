@@ -253,6 +253,16 @@ calibrate_capacity_renege_params <- function(
       )
   }
 
+  if (!isTRUE(allow_negative_params)) {
+    reneg_cap <- reneg_cap |>
+      mutate(
+        across(
+          c("reneges", "treatments"),
+          \(x) ifelse(x < 0, 0, x)
+        )
+      )
+  }
+
   # timestep calcs of reneges and capacity parameters
   reneg_cap <- reneg_cap |>
     mutate(
@@ -275,16 +285,6 @@ calibrate_capacity_renege_params <- function(
         ),
         .by = "months_waited_id"
       )
-
-    if (!isTRUE(allow_negative_params)) {
-      reneg_cap <- reneg_cap |>
-        mutate(
-          across(
-            c("renege_param", "capacity_param"),
-            \(x) ifelse(x < 0, 0, x)
-          )
-        )
-    }
 
     if (any(reneg_cap |> pull(.data$renege_param) < 0)) {
       warning("negative renege parameters present, investigate raw data")
