@@ -375,29 +375,44 @@ find_p <- function(
   ))
 }
 
+#' Convert target_time into a vector of 1s and 0s
+#' @inheritParams find_p
+#' @param n_months integer length 1, number of compartments
+#' @return numeric vector (all values between 0 and 1 inclusive) of length equal to n_months
+#'   value
+#' @noRd
+calc_gamma <- function(target_time, n_months) {
+  if (target_time >= n_months) {
+    stop("target_time must be less than n_months")
+  }
+  ones <- floor(target_time)
+  fraction <- target_time %% 1
+  zeros <- n_months - (ones + 1)
+  gamma <- c(rep(1, ones), fraction, rep(0, zeros))
+  return(gamma)
+}
+
 
 #' Identify the steady-state solution with the closest treatment capacity or renege rate
 #'   to a given target
 #'
-#' @description This function performs a binary search to identify a treatment capacity or
-#'   renege rate that solves the steady state criteria closest to a specified target
-#'   treatment capacity `mu` or renege rate. It uses the `find_p()` function to evaluate
-#'   system convergence and iteratively adjusts `mu_1` until the solution is within a
-#'   defined tolerance or the maximum number of iterations is reached. If convergence is
-#'   not achieved, the function performs secondary searches to identify the best available
-#'   steady-state solution.
+#' @description This function performs either a linear programming or binary search method
+#'   to identify a solution that satisies multiple constraints (1, arrivals = departures,
+#'   2, percentile on waiting list waiting within given time is equal to given value, 3,
+#'   renege rate is equal to given value)
 #'
-#' @param target Numeric. The desired treatment capacity/renege rate to be achieved, see
-#'  'method' argument to define which one will be used.
-#' @param tolerance Numeric. Acceptable deviation from `target` for convergence.
+#' @param target Numeric. The desired renege rate to be achieved. The value must be between
+#'   0 and 1 and represents the proportion of all departures that are reneges.
+#' @param bs_tolerance Numeric. Acceptable deviation from `target` for convergence.
 #'   Defaults to 10\% of `target`.
-#' @param max_iterations Integer. Maximum number of iterations for the binary search.
+#' @param bs_max_iterations Integer. Maximum number of iterations for the binary search.
 #'   Defaults to 10.
-#' @param method String, length 1. Can take value "treatments" (default) to optimise based
-#'   on treatment targets, or "renege_rates" to optimise on renege rates
+#' @param method character length 1; "lp" for linear programming, or "bs" for
+#'   binary search
 #' @inheritParams initialise_removals
 #' @inheritParams calc_wl_sizes
 #' @inheritParams find_p
+#' @inheritParams optimise_steady_state_lp
 #'
 #' @importFrom purrr pluck map map_chr map_dbl
 #'
@@ -417,9 +432,17 @@ find_p <- function(
 #' \dontrun{
 #' optimise_steady_state(
 #'   referrals = 100,
-#'   target = 80,
+#'   target = 0.1,
 #'   renege_params = runif(24),
-#'   method = "treatments"
+#'   method = "lp",
+#'   s_given = c(0.4, 0.2, 0.1, rep(0.05, 6), rep(0, 15))
+#' )
+#'
+#' optimise_steady_state(
+#'   referrals = 100,
+#'   bs_target = 0.2,
+#'   renege_params = runif(24),
+#'   method = "bs"
 #' )
 #' }
 #'
@@ -428,11 +451,12 @@ optimise_steady_state <- function(
   referrals,
   target,
   renege_params,
-  method = c("treatments", "renege_rates"),
   target_time = 4 + (68 / 487),
   percentile = 0.92,
-  tolerance = target * 0.05,
-  max_iterations = 10
+  method = c("lp", "bs"),
+  s_given = NULL,
+  bs_tolerance = target * 0.05,
+  bs_max_iterations = 10
 ) {
   # check referrals is single length numeric
   if (!is.numeric(referrals)) {
@@ -453,101 +477,106 @@ optimise_steady_state <- function(
   }
 
   # check method input
-  if (identical(method, c("treatments", "renege_rates"))) {
-    method <- "treatments"
+  if (identical(method, c("lp", "bs"))) {
+    method <- "lp"
   }
 
   method <- match.arg(
     method,
-    c("treatments", "renege_rates")
+    c("lp", "bs")
   )
 
-  if (method == "treatments") {
-    mu_high <- target * 0.7
-    mu_low <- target * 0.2
-  } else if (method == "renege_rates") {
+  if (method == "lp") {
+    gamma <- calc_gamma(target_time, length(renege_params))
+
+    # check s_given inputs
+    if (is.null(s_given)) {
+      stop("s_given cannot be NULL")
+    }
+
+    if (!is.numeric(s_given)) {
+      stop("s_given must be numeric")
+    }
+
+    if (any(!between(s_given, 0, 1))) {
+      stop("all values of s_given must be between 0 and 1")
+    }
+
+    if (length(s_given) != length(renege_params)) {
+      stop("s_given must be the same length as renege_params")
+    }
+
+    lp_solution <- optimise_steady_state_lp(
+      renege_params = renege_params,
+      referrals = referrals,
+      gamma = gamma,
+      percentile = percentile,
+      theta = target,
+      s_given = s_given
+    )$solution[seq_len(length(renege_params))]
+
+    lp_out <- generate_lp_outputs(
+      renege_params = renege_params,
+      lp_solution = lp_solution,
+      referrals = referrals,
+      percentile = percentile
+    )
+
+    percentile_achieved <- round(lp_out$time_p, 5) == round(target_time, 5)
+    if (isTRUE(percentile_achieved)) {
+      lp_out[["status"]] <- "Converged"
+      lp_out[["solution_method"]] <- "Linear programming exact solution"
+      return(lp_out)
+    } else {
+      theta_increment <- 0.005
+      target <- target - theta_increment
+      while (between(target, 0, 1) & isFALSE(percentile_achieved)) {
+        lp_solution <- optimise_steady_state_lp(
+          renege_params = renege_params,
+          referrals = referrals,
+          gamma = gamma,
+          percentile = percentile,
+          theta = target,
+          s_given = s_given
+        )$solution[seq_len(length(renege_params))]
+
+        lp_out <- generate_lp_outputs(
+          renege_params = renege_params,
+          lp_solution = lp_solution,
+          referrals = referrals,
+          percentile = percentile
+        )
+
+        percentile_achieved <- round(lp_out$time_p, 5) == round(target_time, 5)
+
+        target <- target - theta_increment
+      }
+      if (isTRUE(percentile_achieved)) {
+        lp_out[["status"]] <- "Converged"
+        lp_out[["solution_method"]] <- "Linear programming nearest solution"
+        return(lp_out)
+      } else {
+        lp_out[["status"]] <- "Not converged"
+        lp_out[["solution_method"]] <- NA
+        return(lp_out)
+      }
+    }
+  } else if (method == "bs") {
+    # check bs_bs_method input
+
     target_mu <- referrals - (referrals * target)
     mu_high <- target_mu * 0.7
     mu_low <- target_mu * 0.2
-  }
 
-  iter <- 0
-  tol <- 1e6
-  found_steady_state <- FALSE
-  mu_1_converged <- NA
+    iter <- 0
+    tol <- 1e6
+    found_steady_state <- FALSE
+    mu_1_converged <- NA
 
-  while (tol > tolerance & iter < max_iterations) {
-    iter <- iter + 1
-    mu_mid <- (mu_high + mu_low) / 2 # Calculate midpoint of current mu1
+    while (tol > bs_tolerance & iter < bs_max_iterations) {
+      iter <- iter + 1
+      mu_mid <- (mu_high + mu_low) / 2 # Calculate midpoint of current mu1
 
-    solution <- find_p(
-      renege_params = renege_params,
-      mu_1 = mu_mid,
-      referrals = referrals,
-      target_time = target_time,
-      percentile = percentile,
-      max_iterations = 30
-    )
-
-    if (solution$status == "Converged") {
-      found_steady_state <- TRUE
-      mu_1_converged <- mu_mid
-    }
-
-    if (method == "treatments") {
-      calc_solution <- solution$mu
-    } else if (method == "renege_rates") {
-      calc_solution <- ((referrals - solution$mu) / referrals)
-    }
-    # browser()
-    tol <- abs(calc_solution - target)
-    if (tol < tolerance) {
-      break
-    } else if (method == "treatments") {
-      if (calc_solution < target) {
-        # If the treatment capacity is too low, increase mu1 to find a higher treatment capacity
-        mu_low <- mu_mid
-      } else {
-        # If the treatment capacity is too high, decrease mu1 to find a lower treatment capacity
-        mu_high <- mu_mid
-      }
-    } else if (method == "renege_rates") {
-      if (calc_solution < target) {
-        # If the renege rate is too low, decrease mu1 to find a higher treatment capacity
-        mu_high <- mu_mid
-      } else {
-        # If the renege rate is too high, increase mu1 to find a lower treatment capacity
-        mu_low <- mu_mid
-      }
-    }
-  }
-
-  # here we need to perform and secondary analysis for those who either
-  # haven't found the solution that has a similar mu to the target
-  # or whose solution isn't in steady state
-  # browser()
-  if (solution$status == "Converged") {
-    return(
-      list(
-        p1 = solution$p1,
-        time_p = solution$time_p,
-        mu = solution$mu,
-        wlsize = sum(solution$waiting_list$wlsize),
-        waiting_list = solution$waiting_list,
-        niterations = iter,
-        status = solution$status,
-        method = "Within tolerance of target mu"
-      )
-    )
-  } else if (isTRUE(found_steady_state)) {
-    # where steady state has been found in previous iterations but
-    # not the final iteration, search from the final iteration towards
-    # the iteration where it was found, and select the first occasion
-    # that steady state is identified
-    increment <- (mu_1_converged - mu_mid) / 20
-
-    while (solution$status == "Not converged") {
-      mu_mid <- mu_mid + increment
       solution <- find_p(
         renege_params = renege_params,
         mu_1 = mu_mid,
@@ -556,61 +585,104 @@ optimise_steady_state <- function(
         percentile = percentile,
         max_iterations = 30
       )
-    }
-    return(list(
-      p1 = solution$p1,
-      time_p = solution$time_p,
-      mu = solution$mu,
-      wlsize = sum(solution$waiting_list$wlsize),
-      waiting_list = solution$waiting_list,
-      niterations = -1, # eg, exceeded the iterations step
-      status = solution$status,
-      method = "Between target mu and identified converged value"
-    ))
-  } else {
-    # search along a range of solutions unrelated to the previous searches
-    all_solutions <- seq(
-      from = referrals * 0.1,
-      to = referrals * 0.7,
-      length.out = 400
-    ) |>
-      purrr::map(
-        \(x) {
-          solution <- find_p(
-            renege_params = renege_params,
-            mu_1 = x,
-            referrals = referrals,
-            target_time = target_time,
-            percentile = percentile,
-            max_iterations = 30
-          )
+
+      if (solution$status == "Converged") {
+        found_steady_state <- TRUE
+        mu_1_converged <- mu_mid
+      }
+
+      calc_solution <- ((referrals - solution$mu) / referrals)
+
+      tol <- abs(calc_solution - target)
+      if (tol < bs_tolerance) {
+        break
+      } else {
+        if (calc_solution < target) {
+          # If the renege rate is too low, decrease mu1 to find a higher treatment capacity
+          mu_high <- mu_mid
+        } else {
+          # If the renege rate is too high, increase mu1 to find a lower treatment capacity
+          mu_low <- mu_mid
         }
+      }
+    }
+
+    # here we need to perform and secondary analysis for those who either
+    # haven't found the solution that has a similar mu to the target
+    # or whose solution isn't in steady state
+    # browser()
+    if (solution$status == "Converged") {
+      return(
+        list(
+          p1 = solution$p1,
+          time_p = solution$time_p,
+          mu = solution$mu,
+          wlsize = sum(solution$waiting_list$wlsize),
+          waiting_list = solution$waiting_list,
+          niterations = iter,
+          status = solution$status,
+          solution_method = "Within tolerance of target mu"
+        )
       )
+    } else if (isTRUE(found_steady_state)) {
+      # where steady state has been found in previous iterations but
+      # not the final iteration, search from the final iteration towards
+      # the iteration where it was found, and select the first occasion
+      # that steady state is identified
+      increment <- (mu_1_converged - mu_mid) / 20
 
-    # find only converged solutions (eg, ones in steady state)
-    converged_solutions <- all_solutions |>
-      purrr::map_chr(
-        ~ pluck(.x, "status")
+      while (solution$status == "Not converged") {
+        mu_mid <- mu_mid + increment
+        solution <- find_p(
+          renege_params = renege_params,
+          mu_1 = mu_mid,
+          referrals = referrals,
+          target_time = target_time,
+          percentile = percentile,
+          max_iterations = 30
+        )
+      }
+      return(list(
+        p1 = solution$p1,
+        time_p = solution$time_p,
+        mu = solution$mu,
+        wlsize = sum(solution$waiting_list$wlsize),
+        waiting_list = solution$waiting_list,
+        niterations = -1, # eg, exceeded the iterations step
+        status = solution$status,
+        solution_method = "Between target mu and identified converged value"
+      ))
+    } else {
+      # search along a range of solutions unrelated to the previous searches
+      all_solutions <- seq(
+        from = referrals * 0.1,
+        to = referrals * 0.7,
+        length.out = 400
       ) |>
-      (\(x) x == "Converged")()
+        purrr::map(
+          \(x) {
+            solution <- find_p(
+              renege_params = renege_params,
+              mu_1 = x,
+              referrals = referrals,
+              target_time = target_time,
+              percentile = percentile,
+              max_iterations = 30
+            )
+          }
+        )
 
-    # subset all solutions for those that are converged
-    converged_solutions <- all_solutions[converged_solutions]
+      # find only converged solutions (eg, ones in steady state)
+      converged_solutions <- all_solutions |>
+        purrr::map_chr(
+          ~ pluck(.x, "status")
+        ) |>
+        (\(x) x == "Converged")()
 
-    if (!identical(converged_solutions, list())) {
-      if (method == "treatments") {
-        # of the converged solutions, identify the ones that have
-        # the smalled mu
-        min_mu_solution <- converged_solutions |>
-          purrr::map_dbl(
-            ~ pluck(.x, "mu")
-          ) |>
-          (\(x) x == min(x))()
+      # subset all solutions for those that are converged
+      converged_solutions <- all_solutions[converged_solutions]
 
-        # subset the converged solutions for the one with the
-        # smallest mu
-        final_solution <- converged_solutions[min_mu_solution]
-      } else if (method == "renege_rates") {
+      if (!identical(converged_solutions, list())) {
         # of the converged solutions, identify the ones that have
         # the smalled renege rate
         min_rr_solution <- converged_solutions |>
@@ -624,29 +696,242 @@ optimise_steady_state <- function(
         # subset the converged solutions for the one with the
         # smallest mu
         final_solution <- converged_solutions[min_rr_solution]
-      }
 
-      return(list(
-        p1 = final_solution[[1]]$p1,
-        time_p = final_solution[[1]]$time_p,
-        mu = final_solution[[1]]$mu,
-        wlsize = sum(final_solution[[1]]$waiting_list$wlsize),
-        waiting_list = final_solution[[1]]$waiting_list,
-        niterations = -1, # eg, exceeded the iterations step
-        status = final_solution[[1]]$status,
-        method = "Solution identified from broader mus"
-      ))
-    } else {
-      return(list(
-        p1 = NA,
-        time_p = NA,
-        mu = NA,
-        wlsize = NA,
-        waiting_list = NULL,
-        niterations = -1, # eg, exceeded the iterations step
-        status = NA,
-        method = "No solution identified"
-      ))
+        return(list(
+          p1 = final_solution[[1]]$p1,
+          time_p = final_solution[[1]]$time_p,
+          mu = final_solution[[1]]$mu,
+          wlsize = sum(final_solution[[1]]$waiting_list$wlsize),
+          waiting_list = final_solution[[1]]$waiting_list,
+          niterations = -1, # eg, exceeded the iterations step
+          status = final_solution[[1]]$status,
+          solution_method = "Solution identified from broader mus"
+        ))
+      } else {
+        return(list(
+          p1 = NA,
+          time_p = NA,
+          mu = NA,
+          wlsize = NA,
+          waiting_list = NULL,
+          niterations = -1, # eg, exceeded the iterations step
+          status = NA,
+          solution_method = "No solution identified"
+        ))
+      }
     }
   }
+}
+
+
+# Linear programming method ----------------------------------------------
+
+#######################################################
+# 1. FORMULAE FOR COEFFS/CONSTANTS
+
+#' @inheritParams optimise_steady_state_lp
+#' @noRd
+E <- function(m, renege_params) {
+  1 -
+    ifelse(
+      (length(renege_params) - m) < 1,
+      0,
+      sum(sapply(1:(length(renege_params) - m), function(i) {
+        renege_params[i + m] *
+          ifelse(
+            (i - 1) < 1,
+            1,
+            prod(sapply(1:(i - 1), function(j) (1 - renege_params[j + m])))
+          )
+      }))
+    )
+}
+
+#' @inheritParams optimise_steady_state_lp
+#' @noRd
+J <- function(m, renege_params, gamma, percentile) {
+  sum(sapply(1:(length(renege_params) - m + 1), function(i) {
+    (gamma[i + m - 1] - percentile) *
+      ifelse(
+        (i - 1) < 1,
+        1,
+        prod(sapply(1:(i - 1), function(j) (1 - renege_params[j + m])))
+      )
+  }))
+}
+
+#' @inheritParams optimise_steady_state_lp
+#' @noRd
+G <- function(m, renege_params, theta) {
+  theta +
+    (1 - theta) *
+      ifelse(
+        (length(renege_params) - m) < 1,
+        0,
+        sum(sapply(1:(length(renege_params) - m), function(i) {
+          renege_params[i + m] *
+            ifelse(
+              (i - 1) < 1,
+              1,
+              prod(sapply(1:(i - 1), function(j) (1 - renege_params[j + m])))
+            )
+        }))
+      )
+}
+
+#' @inheritParams optimise_steady_state_lp
+#' @noRd
+Fx <- function(renege_params, referrals) {
+  referrals -
+    referrals *
+      sum(sapply(1:length(renege_params), function(m) {
+        renege_params[m] *
+          ifelse(
+            (m - 1) < 1,
+            1,
+            prod(sapply(1:(m - 1), function(i) (1 - renege_params[i])))
+          )
+      }))
+}
+
+#' @inheritParams optimise_steady_state_lp
+#' @noRd
+I <- function(renege_params, referrals, gamma, percentile) {
+  referrals *
+    sum(sapply(1:length(renege_params), function(m) {
+      (gamma[m] - percentile) *
+        prod(sapply(1:m, function(i) (1 - renege_params[i])))
+    }))
+}
+
+#' @inheritParams optimise_steady_state_lp
+#' @noRd
+H <- function(renege_params, referrals, theta) {
+  (1 - theta) *
+    referrals *
+    sum(sapply(1:length(renege_params), function(m) {
+      renege_params[m] *
+        ifelse(
+          (m - 1) < 1,
+          1,
+          prod(sapply(1:(m - 1), function(i) (1 - renege_params[i])))
+        )
+    }))
+}
+
+#' @inheritParams optimise_steady_state_lp
+#' @noRd
+A <- function(renege_params, referrals, gamma, percentile, theta) {
+  t(as.matrix(data.frame(
+    E = sapply(1:length(renege_params), function(m) E(m, renege_params)),
+    J = sapply(1:length(renege_params), function(m) {
+      J(m, renege_params, gamma, percentile)
+    }),
+    G = sapply(1:length(renege_params), function(m) G(m, renege_params, theta))
+  )))
+}
+
+#' @inheritParams optimise_steady_state_lp
+#' @noRd
+b <- function(renege_params, referrals, gamma, percentile, theta) {
+  c(
+    Fx(renege_params, referrals),
+    I(renege_params, referrals, gamma, percentile),
+    H(renege_params, referrals, theta)
+  )
+}
+
+#' Linear programming solution to steady state optimisation
+#' @param renege_params numeric; proportion \ifelse{html}{\out{(0 &le; r<sub>m</sub> &leq; 1)}}{\eqn{(0 \leq r_m \leq 1)}}
+#'   of waiting patients reneging in the m-th month of waiting, where \ifelse{html}{\out{r<sub>2</sub>}}{\eqn{r_2}} = 0.1
+#'   refers to 10\% of those in the second month of waiting reneging.
+#' @param referrals numeric of length 1; value representing the steady-state number
+#'   of referrals.
+#' @param percentile numeric value between 0 and 1 indicating the desired percentile (default is 0.92).
+#' @param gamma numeric vector, length equal to \code{length(renege_params)}; must take values between
+#'   0 and 1. Vector represents the proportion of the corresponding compartment that the `percentile`
+#'   target refers. For example, if the data has five compartments and the target percentile was at
+#'   exactly 3.5 months, the corresponding vector would be c(1, 1, 1, 0.5, 0, 0)
+#' @param theta numeric value of length 1, must be a value between 0 and 1 which is equal to
+#'   the proportion of all departures that are reneges
+#' @param s_given numeric vector, length equal to \code{length(renege_params)}; values must be between
+#'   0 and 1 and must represent the proportion of total treatments that are applied to each compartment.
+#'   This is used as a constraint in the optimisation and the output should follow the same profile
+#' @importFrom lpSolve lp
+#' @export
+optimise_steady_state_lp <- function(
+  renege_params,
+  referrals,
+  gamma,
+  percentile,
+  theta,
+  s_given
+) {
+  tmp_Tx_given <- s_given * referrals * (1 - theta)
+  tmp_A <- A(renege_params, referrals, gamma, percentile, theta)
+  tmp_b <- b(renege_params, referrals, gamma, percentile, theta)
+  tmp_M <- length(renege_params)
+  # objective: minimize sum d_m, so coeffs: 0 for x, 1 for each d
+  f.obj <- c(rep(0, tmp_M), rep(1, tmp_M))
+  # constraint 1: Ax=b equality constraints
+  con_Ax <- cbind(tmp_A, matrix(0, nrow = nrow(tmp_A), ncol = ncol(tmp_A)))
+  dir_Ax <- rep("=", nrow(tmp_A))
+  rhs_Ax <- tmp_b
+  # constraint 2: d_m >= x_m - tmp_Tx_given_m: d_m - x_m >= -tmp_Tx_given_m
+  con_d_pos <- matrix(0, nrow = ncol(tmp_A), ncol = 2 * ncol(tmp_A))
+  for (m in 1:tmp_M) {
+    con_d_pos[m, m] <- -1 # -x_m
+    con_d_pos[m, tmp_M + m] <- 1 # d_m
+  }
+  dir_d_pos <- rep(">=", tmp_M)
+  rhs_d_pos <- -tmp_Tx_given
+  # constraint 3: d_m >= tmp_Tx_given_m - x_m: d_m + x_m >= tmp_Tx_given_m
+  con_d_neg <- matrix(0, nrow = ncol(tmp_A), ncol = 2 * ncol(tmp_A))
+  for (m in 1:tmp_M) {
+    con_d_neg[m, m] <- 1 # x_m
+    con_d_neg[m, tmp_M + m] <- 1 # d_m
+  }
+  dir_d_neg <- rep(">=", tmp_M)
+  rhs_d_neg <- tmp_Tx_given
+  # combine
+  f.con <- rbind(con_Ax, con_d_pos, con_d_neg)
+  f.dir <- c(dir_Ax, dir_d_pos, dir_d_neg)
+  f.rhs <- c(rhs_Ax, rhs_d_pos, rhs_d_neg)
+  # solution
+  solution <- lpSolve::lp("min", f.obj, f.con, f.dir, f.rhs, all.int = FALSE)
+
+  return(solution)
+}
+
+generate_lp_outputs <- function(
+  renege_params,
+  lp_solution,
+  referrals,
+  percentile
+) {
+  wl_setup <- data.frame(
+    months_waited_id = seq_along(renege_params) - 1,
+    r = renege_params,
+    service = lp_solution
+  )
+
+  waiting_list <- calc_wl_sizes(wl_setup, referrals = referrals)
+
+  solution_time <- hist_percentile_calc(
+    waiting_list,
+    percentile = percentile,
+    wlsize_col = "wlsize",
+    time_col = "months_waited_id"
+  )
+
+  return(
+    list(
+      p1 = NA,
+      time_p = solution_time,
+      mu = sum(lp_solution),
+      wlsize = sum(waiting_list$wlsize),
+      waiting_list = waiting_list,
+      niterations = NA
+    )
+  )
 }

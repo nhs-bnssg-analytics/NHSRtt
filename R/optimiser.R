@@ -47,32 +47,51 @@
 #'   optimiser converged.
 #' @export
 #'
-optimise_capacity <- function(t_1_capacity, referrals_projections,
-                              incomplete_pathways, renege_capacity_params,
-                              target, target_bin, capacity_profile = "linear_change",
-                              surplus_treatment_redistribution_method = "evenly",
-                              tolerance, max_iterations = 50) {
-
+optimise_capacity <- function(
+  t_1_capacity,
+  referrals_projections,
+  incomplete_pathways,
+  renege_capacity_params,
+  target,
+  target_bin,
+  capacity_profile = "linear_change",
+  surplus_treatment_redistribution_method = "evenly",
+  tolerance,
+  max_iterations = 50
+) {
   # checks
 
   # check lengths of inputs
-  if (length(t_1_capacity) != 1)
+  if (length(t_1_capacity) != 1) {
     stop("t_1_capacity must be length 1")
+  }
 
   # check numeric inputs for t_1_capacity
-  if (!is.numeric(t_1_capacity))
+  if (!is.numeric(t_1_capacity)) {
     stop("t_1_capacity must be numeric")
+  }
 
-  if (!is.numeric(referrals_projections))
+  if (!is.numeric(referrals_projections)) {
     stop("referrals must be a numeric vector")
+  }
 
   # check target_bin in incompletes data
-  if (!(target_bin %in% incomplete_pathways[["months_waited_id"]]))
+  if (!(target_bin %in% incomplete_pathways[["months_waited_id"]])) {
     stop("target_bin must be within the incompletes_pathways data set")
+  }
 
   # check field names
-  if (length(setdiff(names(renege_capacity_params), c("months_waited_id", "renege_param", "capacity_param"))) > 0)
-    stop("renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param")
+  if (
+    length(setdiff(
+      names(renege_capacity_params),
+      c("months_waited_id", "renege_param", "capacity_param")
+    )) >
+      0
+  ) {
+    stop(
+      "renege_capacity_params must have the column names: months_waited_id, renege_param and capacity_param"
+    )
+  }
 
   # check values of capacity_param
   if (all(renege_capacity_params[["capacity_param"]] == 0)) {
@@ -84,38 +103,49 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     return(change_proportion)
   }
 
-  # check whether target_bin is less than the greatest number of months waited
-  # in the incompletes dataset
   max_months_waited <- max(incomplete_pathways[["months_waited_id"]])
-  if (target_bin > max_months_waited) {
-    stop("target_bin is outside the months waited range in the data provided")
-  }
 
   # check the column headers
-  if (length(dplyr::setdiff(names(incomplete_pathways), c("months_waited_id", "incompletes"))) > 0) {
-    stop("incomplete_pathways must have field names of 'months_waited_id' and 'incompletes'")
+  if (
+    length(dplyr::setdiff(
+      names(incomplete_pathways),
+      c("months_waited_id", "incompletes")
+    )) >
+      0
+  ) {
+    stop(
+      "incomplete_pathways must have field names of 'months_waited_id' and 'incompletes'"
+    )
   }
 
   # checks on target
-  if (!grepl("%", target))
+  if (!grepl("%", target)) {
     stop("target must have a percentage")
+  }
 
-  if (length(parse_number(target)) == 0)
+  if (length(parse_number(target)) == 0) {
     stop("unable to parse the number from target")
+  }
 
-  if (length(parse_number(target)) > 1)
+  if (length(parse_number(target)) > 1) {
     stop("multiple numbers parsed from target")
+  }
 
-  if (!between(parse_number(target), 0, 100) &
-      !grepl("~", target))
-      stop("absolute target must be between 0% and 100%")
+  if (
+    !between(parse_number(target), 0, 100) &
+      !grepl("~", target)
+  ) {
+    stop("absolute target must be between 0% and 100%")
+  }
 
   # checks on tolerance
-  if (!is.numeric(tolerance))
+  if (!is.numeric(tolerance)) {
     stop("tolerance must be numeric")
+  }
 
-  if (length(tolerance) > 1)
+  if (length(tolerance) > 1) {
     stop("tolerance must be length 1")
+  }
 
   # if no t_1 capacity then multiplier will not work
   if (t_1_capacity == 0) {
@@ -154,8 +184,9 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
   # if there are no incompletes in final bin (eg, current_val is NaN), need to
   # set current_val to 0
-  if (is.nan(current_val))
+  if (is.nan(current_val)) {
     current_val <- 0
+  }
 
   target_val <- parse_number(target) / 100
 
@@ -165,10 +196,14 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   }
 
   # set target_val to 0 if it is negative
-  if (target_val < 0) target_val <- 0
+  if (target_val < 0) {
+    target_val <- 0
+  }
 
   # set target_val to 100% if over 100%
-  if (target_val > 1) target_val <- 1
+  if (target_val > 1) {
+    target_val <- 1
+  }
 
   change_proportion <- 1 # this controls the size of the adjustment for each iteration
   converged <- FALSE
@@ -189,7 +224,6 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
   min_change_proportion <- NULL
 
   while (converged == FALSE) {
-
     if (capacity_profile == "linear_change") {
       # build linear model for monthly capacity
       lm_fit <- stats::lm(
@@ -197,14 +231,14 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
         data = tibble(
           capacity = c(t_1_capacity, t_1_capacity * change_proportion),
           period = c(1, 13)
-        ))
+        )
+      )
 
       capacity_projections <- stats::predict(
         object = lm_fit,
         newdata = tibble(period = 1:length(referrals_projections))
       ) |>
         unname()
-
     } else if (capacity_profile == "flat") {
       # create a flat profile for capacity with the same length as the referrals
       # profile
@@ -216,7 +250,6 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
 
     # floor the data at 0 because negative capacity is not possible
     capacity_projections[capacity_projections < 0] <- 0
-
 
     proportion_at_highest_bin <- apply_params_to_projections(
       capacity_projections = capacity_projections,
@@ -270,9 +303,10 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     } else {
       iteration <- iteration + 1
 
-      if (isTRUE(last_iteration_proportion == proportion_at_highest_bin) &
-          !(proportion_at_highest_bin %in% c(0, 1))) {
-
+      if (
+        isTRUE(last_iteration_proportion == proportion_at_highest_bin) &
+          !(proportion_at_highest_bin %in% c(0, 1))
+      ) {
         warning("parameter distribution means optimiser cannot meet target")
         converged <- TRUE
         change_proportion <- Inf
@@ -335,8 +369,6 @@ optimise_capacity <- function(t_1_capacity, referrals_projections,
     #     "\n"
     #   )
     # )
-
-
   }
 
   return(change_proportion)

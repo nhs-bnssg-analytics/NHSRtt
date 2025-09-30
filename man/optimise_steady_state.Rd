@@ -9,36 +9,41 @@ optimise_steady_state(
   referrals,
   target,
   renege_params,
-  method = c("treatments", "renege_rates"),
   target_time = 4 + (68/487),
   percentile = 0.92,
-  tolerance = target * 0.05,
-  max_iterations = 10
+  method = c("lp", "bs"),
+  s_given = NULL,
+  bs_tolerance = target * 0.05,
+  bs_max_iterations = 10
 )
 }
 \arguments{
 \item{referrals}{numeric of length 1; value representing the steady-state number
 of referrals.}
 
-\item{target}{Numeric. The desired treatment capacity/renege rate to be achieved, see
-'method' argument to define which one will be used.}
+\item{target}{Numeric. The desired renege rate to be achieved. The value must be between
+0 and 1 and represents the proportion of all departures that are reneges.}
 
 \item{renege_params}{numeric; proportion \ifelse{html}{\out{(0 &le; r<sub>m</sub> &leq; 1)}}{\eqn{(0 \leq r_m \leq 1)}}
 of waiting patients reneging in the m-th month of waiting, where \ifelse{html}{\out{r<sub>2</sub>}}{\eqn{r_2}} = 0.1
 refers to 10\% of those in the second month of waiting reneging.}
-
-\item{method}{String, length 1. Can take value "treatments" (default) to optimise based
-on treatment targets, or "renege_rates" to optimise on renege rates}
 
 \item{target_time}{numeric of length 1; the target waiting time,
 in months, to achieve the specified percentile.}
 
 \item{percentile}{Numeric value between 0 and 1 indicating the desired percentile (default is 0.92).}
 
-\item{tolerance}{Numeric. Acceptable deviation from `target` for convergence.
+\item{method}{character length 1; "lp" for linear programming, or "bs" for
+binary search}
+
+\item{s_given}{numeric vector, length equal to \code{length(renege_params)}; values must be between
+0 and 1 and must represent the proportion of total treatments that are applied to each compartment.
+This is used as a constraint in the optimisation and the output should follow the same profile}
+
+\item{bs_tolerance}{Numeric. Acceptable deviation from `target` for convergence.
 Defaults to 10\% of `target`.}
 
-\item{max_iterations}{Integer. Maximum number of iterations for the binary search.
+\item{bs_max_iterations}{Integer. Maximum number of iterations for the binary search.
 Defaults to 10.}
 }
 \value{
@@ -55,21 +60,26 @@ A list containing:
   \item{method}{The method the solution was identified.}
 }
 \description{
-This function performs a binary search to identify a treatment capacity or
-  renege rate that solves the steady state criteria closest to a specified target
-  treatment capacity `mu` or renege rate. It uses the `find_p()` function to evaluate
-  system convergence and iteratively adjusts `mu_1` until the solution is within a
-  defined tolerance or the maximum number of iterations is reached. If convergence is
-  not achieved, the function performs secondary searches to identify the best available
-  steady-state solution.
+This function performs either a linear programming or binary search method
+  to identify a solution that satisies multiple constraints (1, arrivals = departures,
+  2, percentile on waiting list waiting within given time is equal to given value, 3,
+  renege rate is equal to given value)
 }
 \examples{
 \dontrun{
 optimise_steady_state(
   referrals = 100,
-  target = 80,
+  target = 0.1,
   renege_params = runif(24),
-  method = "treatments"
+  method = "lp",
+  s_given = c(0.4, 0.2, 0.1, rep(0.05, 6), rep(0, 15))
+)
+
+optimise_steady_state(
+  referrals = 100,
+  bs_target = 0.2,
+  renege_params = runif(24),
+  method = "bs"
 )
 }
 
