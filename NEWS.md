@@ -1,3 +1,7 @@
+# NHSRtt 0.4.1
+
+* hotfix to ensure newly introduced NAs in raw data don't result in NAs when summed to aggregate data in `get_rtt_data()`
+
 # NHSRtt 0.4.0
 
 * Includes linear programming solution to steady state optimisation problem

@@ -276,7 +276,6 @@ tidy_file <- function(
   trust_codes = NULL,
   specialty_codes = NULL
 ) {
-  # browser()
   rtt <- data.table::fread(
     input = csv_filepath,
     na.strings = ""
@@ -386,7 +385,7 @@ tidy_file <- function(
     dplyr::summarise(
       across(
         starts_with("Gt"),
-        sum
+        ~ sum(.x, na.rm = TRUE)
       ),
       .by = c(
         "period",
@@ -449,7 +448,7 @@ tidy_file <- function(
         levels = c("<1", paste(0:23, 1:24, sep = "-"), "24+")
       )
     )
-  # browser()
+
   rtt <- compl_incompl |>
     dtplyr::lazy_dt() |>
     dplyr::left_join(

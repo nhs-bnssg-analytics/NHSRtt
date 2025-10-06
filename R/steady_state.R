@@ -610,7 +610,7 @@ optimise_steady_state <- function(
     # here we need to perform and secondary analysis for those who either
     # haven't found the solution that has a similar mu to the target
     # or whose solution isn't in steady state
-    # browser()
+
     if (solution$status == "Converged") {
       return(
         list(
