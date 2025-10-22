@@ -254,12 +254,10 @@ calibrate_capacity_renege_params <- function(
   }
 
   if (!isTRUE(allow_negative_params)) {
+    reneg_cap <- redistribute_negative_reneges(reneg_cap)
     reneg_cap <- reneg_cap |>
       mutate(
-        across(
-          c("reneges", "treatments"),
-          \(x) ifelse(x < 0, 0, x)
-        )
+        treatments = ifelse(.data$treatments < 0, 0, .data$treatments)
       )
   }
 
@@ -286,16 +284,84 @@ calibrate_capacity_renege_params <- function(
         .by = "months_waited_id"
       )
 
-    if (any(reneg_cap |> pull(.data$renege_param) < 0)) {
+    if (any(round(reneg_cap$renege_param, 8) < 0)) {
       warning("negative renege parameters present, investigate raw data")
     }
 
-    if (any(reneg_cap |> pull(.data$capacity_param) < 0)) {
+    if (any(round(reneg_cap$capacity_param, 8) < 0)) {
       warning("negative capacity parameters present, investigate raw data")
     }
   }
 
   return(reneg_cap)
+}
+
+#' identifies compartments where negative reneging occurs, and then calculate
+#' when those people would have had their clock start. Iteratively uplift
+#' the waiting list counts for the periods between the negative reneges to
+#' ensure there is no resulting negative reneging
+#'
+#' @param data tibble with the fields period_id, months_waited_id, node_inflow,
+#' treatments, waiting_same_node and reneges
+#' @noRd
+redistribute_negative_reneges <- function(data) {
+  adjusted_df <- dplyr::tibble()
+  required_periods <- seq(
+    # need to go back prior to the start of the data so people whose
+    # clock start was prior to the observation window are also captured
+    from = min(data$period_id) - max(data$months_waited_id),
+    to = max(data$period_id)
+  )
+  for (start_period_id in required_periods) {
+    temp_df <- dplyr::tibble(
+      period_id = seq(
+        from = start_period_id,
+        to = max(data$period_id)
+      )
+    ) |>
+      mutate(
+        months_waited_id = dplyr::row_number() - 1
+      ) |>
+      # inner join to ensure only the compartments in the observed
+      # data are included
+      dplyr::inner_join(
+        data,
+        by = c("period_id", "months_waited_id")
+      )
+
+    cumulative_adjustment <- 0
+
+    # uplift the waiting list in reverse chronological order
+    for (i in rev(seq_len(nrow(temp_df)))) {
+      temp_df <- temp_df |>
+        mutate(
+          across(
+            c("node_inflow", "waiting_same_node"),
+            (\(x) x + cumulative_adjustment)
+          )
+        )
+      if (temp_df$reneges[i] < 0) {
+        adjustment <- abs(temp_df$reneges[i])
+        temp_df$node_inflow[i] <- temp_df$node_inflow[i] + adjustment
+        cumulative_adjustment <- cumulative_adjustment + adjustment
+      }
+    }
+
+    temp_df <- temp_df |>
+      mutate(
+        reneges = .data$node_inflow - .data$treatments - .data$waiting_same_node
+      )
+    adjusted_df <- dplyr::bind_rows(
+      adjusted_df,
+      temp_df
+    )
+  }
+  adjusted_df <- adjusted_df |>
+    dplyr::arrange(
+      .data$months_waited_id,
+      .data$period_id
+    )
+  return(adjusted_df)
 }
 
 #' Apply the parameters for renege and capacity (by months waited) to

@@ -1,3 +1,7 @@
+# NHSRtt 0.4.2
+
+* when calibrating the model using `calibrate_capacity_renege_params()`, the `allow_negative_params` argument will now assume cases of negative reneges in the calibration period to be patients transferred into the pathway without an associated clock start. Setting this argument to `FALSE` will ensure their clock start is determined, and the appropriate uplift to referrals and the accompanying waiting list size is calculated
+
 # NHSRtt 0.4.1
 
 * hotfix to ensure newly introduced NAs in raw data don't result in NAs when summed to aggregate data in `get_rtt_data()`
