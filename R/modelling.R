@@ -305,58 +305,66 @@ calibrate_capacity_renege_params <- function(
 #' treatments, waiting_same_node and reneges
 #' @noRd
 redistribute_negative_reneges <- function(data) {
-  adjusted_df <- dplyr::tibble()
-  required_periods <- seq(
+  dts <- seq(
     # need to go back prior to the start of the data so people whose
     # clock start was prior to the observation window are also captured
     from = min(data$period_id) - max(data$months_waited_id),
     to = max(data$period_id)
   )
-  for (start_period_id in required_periods) {
-    temp_df <- dplyr::tibble(
-      period_id = seq(
-        from = start_period_id,
-        to = max(data$period_id)
-      )
-    ) |>
-      mutate(
-        months_waited_id = dplyr::row_number() - 1
-      ) |>
-      # inner join to ensure only the compartments in the observed
-      # data are included
-      dplyr::inner_join(
-        data,
-        by = c("period_id", "months_waited_id")
-      )
 
-    cumulative_adjustment <- 0
-
-    # uplift the waiting list in reverse chronological order
-    for (i in rev(seq_len(nrow(temp_df)))) {
-      temp_df <- temp_df |>
-        mutate(
-          across(
-            c("node_inflow", "waiting_same_node"),
-            (\(x) x + cumulative_adjustment)
-          )
+  adjusted_df <- Map(
+    \(dt, i) {
+      temp_df <- dplyr::tibble(
+        period_id = seq(
+          from = dt,
+          to = max(data$period_id)
         )
-      if (temp_df$reneges[i] < 0) {
-        adjustment <- abs(temp_df$reneges[i])
-        temp_df$node_inflow[i] <- temp_df$node_inflow[i] + adjustment
-        cumulative_adjustment <- cumulative_adjustment + adjustment
-      }
-    }
-
-    temp_df <- temp_df |>
-      mutate(
-        reneges = .data$node_inflow - .data$treatments - .data$waiting_same_node
-      )
-    adjusted_df <- dplyr::bind_rows(
-      adjusted_df,
-      temp_df
-    )
-  }
-  adjusted_df <- adjusted_df |>
+      ) |>
+        mutate(
+          months_waited_id = dplyr::row_number() - 1,
+          timeseries_id = i
+        )
+    },
+    dts,
+    seq_along(dts)
+  ) |>
+    dplyr::bind_rows() |>
+    # inner join to ensure only the compartments in the observed
+    # data are included
+    dplyr::inner_join(
+      data,
+      by = c("period_id", "months_waited_id")
+    ) |>
+    dplyr::arrange(
+      .data$timeseries_id,
+      dplyr::desc(.data$period_id)
+    ) |>
+    mutate(
+      renege_adjustment = case_when(
+        .data$reneges < 0 ~ abs(.data$reneges),
+        .default = 0
+      ),
+      cumulative_adjustment = cumsum(dplyr::lag(
+        renege_adjustment,
+        default = 0
+      )),
+      node_inflow = .data$node_inflow +
+        .data$renege_adjustment +
+        .data$cumulative_adjustment,
+      waiting_same_node = .data$waiting_same_node + .data$cumulative_adjustment,
+      .by = "timeseries_id"
+    ) |>
+    mutate(
+      reneges = .data$node_inflow - .data$treatments - .data$waiting_same_node
+    ) |>
+    dplyr::select(
+      "period_id",
+      "months_waited_id",
+      "node_inflow",
+      "treatments",
+      "waiting_same_node",
+      "reneges"
+    ) |>
     dplyr::arrange(
       .data$months_waited_id,
       .data$period_id
