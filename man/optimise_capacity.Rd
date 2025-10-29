@@ -8,6 +8,7 @@ optimise_capacity(
   t_1_capacity,
   referrals_projections,
   incomplete_pathways,
+  incomplete_adjustment_factor = NULL,
   renege_capacity_params,
   target,
   target_bin,
@@ -19,16 +20,24 @@ optimise_capacity(
 }
 \arguments{
 \item{t_1_capacity}{numeric; a single value for the capacity for the first
-time period of the projected time period}
+time period of the projected time period.}
 
 \item{referrals_projections}{numeric; a vector for the number of referrals
-for each period in the projected time period}
+for each period in the projected time period.}
 
 \item{incomplete_pathways}{tibble; two column data frame or tibble, with
 fields called months_waited_id (taking values 0 to the maximum months
 waited group of interest), and incompletes (the count of the number of
 incomplete pathways) representing the count of incomplete pathways at
 timestep 0 (to initialise the model with)}
+
+\item{incomplete_adjustment_factor}{tibble; with fields "months_waited_id" and
+"adjustment_factor"; this is used if adjusted incomplete counts used in the
+\code{incomplete_pathways} parameter, where the adjusted incomplete counts
+represent a waiting list that include individuals thatare on the waiting list
+without a clock start (eg, they have joined the waiting list partway through
+their pathway). This argument is needed as the performance will be calculated
+using an unadjusted count of incomplete pathways.}
 
 \item{renege_capacity_params}{tibble; three column data frame or tibble, with
 fields called months_waited_id (taking values 0 to the maximum months
@@ -41,7 +50,7 @@ renege_param, which are outputs from the function
 patients on the waiting list in the \code{target_bin} or higher waiting
 times. Note, this is the opposite of the NHS RTT targets, which are a
 proportion of patients on the waiting list that are below the
-\code{target_bin}}
+\code{target_bin}.}
 
 \item{target_bin}{numeric length 1; the bin that the target refers to. It
 must be less than or equal to the max_months_waited value}
@@ -50,7 +59,7 @@ must be less than or equal to the max_months_waited value}
 how the capacity counts vary into the future. Linear change means that the
 first point is held stationary at the value of \code{t_1_capacity} and the
 end point is varied, with a linear interpolation between the two points.
-Flat means that capacity remains constant into the future}
+Flat means that capacity remains constant into the future.}
 
 \item{surplus_treatment_redistribution_method}{string; one of "none",
 "evenly" or "prioritise_long_waiters"; should cases where the counts of
@@ -63,10 +72,10 @@ absolute error is calculated on the proportion in the max_months_waited bin
 relative to the total waiting (even if a non-percentage target is used)}
 
 \item{max_iterations}{numeric; the maximum number of iterations to test for
-convergence before providing a warning and an invalid number}
+convergence before providing a warning and an invalid number.}
 }
 \value{
-A capacity multiplier representing that is applied to the
+A capacity multiplier that is applied to the
   \code{t_1_capacity} input to achieve the desired target by the end of the
   projection period. Where the \code{capacity_profile} is 'linear_change',
   this represent a linear growth in capacity from

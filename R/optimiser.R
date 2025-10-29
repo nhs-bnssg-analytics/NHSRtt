@@ -1,35 +1,42 @@
 #' Optimise the capacity profile for projections
 #'
 #' @param t_1_capacity numeric; a single value for the capacity for the first
-#'   time period of the projected time period
+#'   time period of the projected time period.
 #' @param referrals_projections numeric; a vector for the number of referrals
-#'   for each period in the projected time period
+#'   for each period in the projected time period.
 #' @param target string length 1; can be either a percentage point change, eg,
 #'   "~-5\%" or a percent value, eg, "5\%". This refers to percentage of
 #'   patients on the waiting list in the \code{target_bin} or higher waiting
 #'   times. Note, this is the opposite of the NHS RTT targets, which are a
 #'   proportion of patients on the waiting list that are below the
-#'   \code{target_bin}
+#'   \code{target_bin}.
 #' @param target_bin numeric length 1; the bin that the target refers to. It
 #'   must be less than or equal to the max_months_waited value
 #' @param capacity_profile string, one of "linear_change" or "flat"; determines
 #'   how the capacity counts vary into the future. Linear change means that the
 #'   first point is held stationary at the value of \code{t_1_capacity} and the
 #'   end point is varied, with a linear interpolation between the two points.
-#'   Flat means that capacity remains constant into the future
+#'   Flat means that capacity remains constant into the future.
 #' @param tolerance numeric length 1; the tolerance used to compare the absolute
 #'   error with in the max_months_waited bin to determine convergence. The
 #'   absolute error is calculated on the proportion in the max_months_waited bin
 #'   relative to the total waiting (even if a non-percentage target is used)
 #' @param max_iterations numeric; the maximum number of iterations to test for
-#'   convergence before providing a warning and an invalid number
+#'   convergence before providing a warning and an invalid number.
+#' @param incomplete_adjustment_factor tibble; with fields "months_waited_id" and
+#'   "adjustment_factor"; this is used if adjusted incomplete counts used in the
+#'   \code{incomplete_pathways} parameter, where the adjusted incomplete counts
+#'   represent a waiting list that include individuals thatare on the waiting list
+#'   without a clock start (eg, they have joined the waiting list partway through
+#'   their pathway). This argument is needed as the performance will be calculated
+#'   using an unadjusted count of incomplete pathways.
 #' @inheritParams apply_params_to_projections
 #'
 #' @importFrom dplyr setdiff mutate case_when summarise filter pull between
 #' @importFrom stats lm predict
 #' @importFrom rlang .data
 #'
-#' @returns A capacity multiplier representing that is applied to the
+#' @returns A capacity multiplier that is applied to the
 #'   \code{t_1_capacity} input to achieve the desired target by the end of the
 #'   projection period. Where the \code{capacity_profile} is 'linear_change',
 #'   this represent a linear growth in capacity from
@@ -51,6 +58,7 @@ optimise_capacity <- function(
   t_1_capacity,
   referrals_projections,
   incomplete_pathways,
+  incomplete_adjustment_factor = NULL,
   renege_capacity_params,
   target,
   target_bin,
@@ -162,8 +170,55 @@ optimise_capacity <- function(
     c("linear_change", "flat")
   )
 
+  # check incomplete_adjustment_factor
+  if (!is.null(incomplete_adjustment_factor)) {
+    if (!dplyr::is.tbl(incomplete_adjustment_factor)) {
+      stop("incomplete_adjustment_factor must be a tibble")
+    }
+
+    # check the names of the provided tibble
+    if (
+      !all(
+        names(incomplete_adjustment_factor) %in%
+          c("months_waited_id", "adjustment_factor")
+      )
+    ) {
+      stop(
+        "names of incomplete_adjustment_factor must be 'months_waited_id' and 'adjustment_factor'"
+      )
+    }
+  }
+
+  # check that values are provided for all months_waited_id
+  if (
+    !all(
+      incomplete_adjustment_factor[["months_waited_id"]] %in%
+        incomplete_pathways[["months_waited_id"]]
+    )
+  ) {
+    stop(
+      "months_waited_id values in incomplete_adjustment_factor must match those in incomplete_pathways"
+    )
+  }
+
+  if (!is.null(incomplete_adjustment_factor)) {
+    # deflate_incomplete_pathways to calculate performance
+    incomplete_pathways_unadjusted <- incomplete_pathways |>
+      dplyr::left_join(
+        incomplete_adjustment_factor,
+        by = "months_waited_id"
+      ) |>
+      mutate(
+        incompletes = .data$incompletes /
+          (1 + .data$adjustment_factor)
+      ) |>
+      select(!c("adjustment_factor"))
+  } else {
+    incomplete_pathways_unadjusted <- incomplete_pathways
+  }
+
   # target calculation
-  current_val <- incomplete_pathways |>
+  current_val <- incomplete_pathways_unadjusted |>
     mutate(
       months_waited_id = case_when(
         months_waited_id >= target_bin ~ target_bin,
@@ -261,7 +316,23 @@ optimise_capacity <- function(
     ) |>
       filter(
         period_id == max(period_id)
-      ) |>
+      )
+
+    if (!is.null(incomplete_adjustment_factor)) {
+      # deflate_incomplete_pathways
+      proportion_at_highest_bin <- proportion_at_highest_bin |>
+        dplyr::left_join(
+          incomplete_adjustment_factor,
+          by = "months_waited_id"
+        ) |>
+        mutate(
+          incompletes = .data$incompletes /
+            (1 + .data$adjustment_factor)
+        ) |>
+        select(!c("adjustment_factor"))
+    }
+
+    proportion_at_highest_bin <- proportion_at_highest_bin |>
       mutate(
         months_waited_id = case_when(
           months_waited_id >= target_bin ~ target_bin,
@@ -295,6 +366,7 @@ optimise_capacity <- function(
     compare_with_target <- (proportion_at_highest_bin - target_val)
 
     if (abs(compare_with_target) < tolerance) {
+      # browser()
       converged <- TRUE
       change_proportion <- setNames(
         change_proportion,
