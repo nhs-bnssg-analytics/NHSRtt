@@ -1,3 +1,7 @@
+# NHSRtt 0.4.3
+
+* the `optimise_capacity()` function now accepts an argument for incomplete_adjustment_factor, which allows the optimiser to calculate performance on the unadjusted waiting list rather than the adjusted waiting list 
+
 # NHSRtt 0.4.2
 
 * when calibrating the model using `calibrate_capacity_renege_params()`, the `allow_negative_params` argument will now assume cases of negative reneges in the calibration period to be patients transferred into the pathway without an associated clock start. Setting this argument to `FALSE` will ensure their clock start is determined, and the appropriate uplift to referrals and the accompanying waiting list size is calculated

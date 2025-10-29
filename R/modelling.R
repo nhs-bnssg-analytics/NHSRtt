@@ -345,7 +345,7 @@ redistribute_negative_reneges <- function(data) {
         .default = 0
       ),
       cumulative_adjustment = cumsum(dplyr::lag(
-        renege_adjustment,
+        .data$renege_adjustment,
         default = 0
       )),
       node_inflow = .data$node_inflow +

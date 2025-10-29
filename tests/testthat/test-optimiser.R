@@ -382,3 +382,154 @@ test_that("optimise_capacity functionality", {
     info = "optimise_capacity consistently produces an answer with flat profile"
   )
 })
+
+test_that("optimise_capacity functionality with incomplete_adjustment_factor", {
+  set.seed(777)
+  max_months <- 4
+
+  future_capacity <- create_dummy_data(
+    type = "complete",
+    max_months_waited = max_months,
+    number_periods = 1,
+  ) |>
+    dplyr::pull(.data$treatments) |>
+    sum()
+
+  future_referrals <- create_dummy_data(
+    type = "referral",
+    max_months_waited = max_months,
+    number_periods = 24,
+  ) |>
+    dplyr::pull(.data$referrals)
+
+  incompletes_t0 <- create_dummy_data(
+    type = "incomplete",
+    max_months_waited = max_months,
+    number_periods = 1,
+  ) |>
+    dplyr::summarise(
+      incompletes = mean(.data$incompletes),
+      .by = "months_waited_id"
+    )
+
+  refs <- create_dummy_data(
+    type = "referral",
+    max_months_waited = max_months,
+    number_periods = 6
+  )
+
+  incomp_multiplier <- dplyr::tibble(
+    period_id = 0:6,
+    multiplier = seq(1, 3, length.out = 7)
+  )
+
+  incomp <- create_dummy_data(
+    type = "incomplete",
+    max_months_waited = max_months,
+    number_periods = 6
+  ) |>
+    left_join(
+      incomp_multiplier,
+      by = "period_id"
+    ) |>
+    mutate(incompletes = incompletes * multiplier) |>
+    select(!c("multiplier"))
+
+  comp <- create_dummy_data(
+    type = "complete",
+    max_months_waited = max_months,
+    number_periods = 6
+  )
+
+  params <- calibrate_capacity_renege_params(
+    referrals = refs,
+    incompletes = incomp,
+    completes = comp,
+    max_months_waited = max_months,
+    redistribute_m0_reneges = FALSE,
+    allow_negative_params = FALSE
+  )
+
+  incomp_adjustment_factor <- calibrate_capacity_renege_params(
+    referrals = refs,
+    incompletes = incomp,
+    completes = comp,
+    max_months_waited = max_months,
+    redistribute_m0_reneges = FALSE,
+    allow_negative_params = FALSE,
+    full_breakdown = TRUE
+  ) |>
+    select(
+      "period_id",
+      "months_waited_id",
+      "adjusted_incompletes" = "waiting_same_node"
+    ) |>
+    dplyr::left_join(
+      incomp,
+      by = c("period_id", "months_waited_id")
+    ) |>
+    mutate(
+      monthly_uplift = (.data$adjusted_incompletes / .data$incompletes) - 1
+    ) |>
+    summarise(
+      adjustment_factor = mean(.data$monthly_uplift, na.rm = TRUE),
+      .by = "months_waited_id"
+    )
+
+  # CHECKS
+  # calculate capacity uplift
+
+  target_val <- 0.6
+  tol <- 0.005
+  cap_uplift <- optimise_capacity(
+    t_1_capacity = future_capacity,
+    referrals_projections = future_referrals,
+    incomplete_pathways = incompletes_t0,
+    incomplete_adjustment_factor = incomp_adjustment_factor,
+    renege_capacity_params = params,
+    target_bin = max_months,
+    target = paste0(target_val * 100, "%"),
+    tolerance = tol
+  )
+
+  # calc monthly capacity increase
+  monthly_capacity_increase <- unname(
+    (future_capacity * cap_uplift) - future_capacity
+  ) /
+    12
+  # calculate the future capacity profile
+  future_cap_profile <- rep(future_capacity, times = length(future_referrals)) +
+    (monthly_capacity_increase * (seq_along(future_referrals) - 1))
+
+  # calculate the final performance
+  perf_end <- apply_params_to_projections(
+    capacity_projections = future_cap_profile,
+    referrals_projections = future_referrals,
+    incomplete_pathways = incompletes_t0,
+    renege_capacity_params = params,
+    max_months_waited = max_months
+  ) |>
+    filter(period_id == max(period_id)) |>
+    select("period_id", "months_waited_id", "incompletes") |>
+    left_join(
+      incomp_adjustment_factor,
+      by = "months_waited_id"
+    ) |>
+    mutate(
+      incompletes = incompletes / (1 + adjustment_factor)
+    ) |>
+    summarise(
+      across(
+        incompletes,
+        \(x) sum(x[max_months + 1]) / sum(x)
+      )
+    ) |>
+    pull(incompletes)
+
+  expect_equal(
+    perf_end,
+    target_val,
+    tolerance = tol / target_val,
+    info = "target value is achieved"
+  )
+})
