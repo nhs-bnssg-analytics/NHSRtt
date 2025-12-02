@@ -1,0 +1,117 @@
+# Apply the parameters for renege and capacity (by months waited) to projections of capacity and referrals. If needed, or if validating your parameters, include the observed incomplete pathways by the number of months waited for the period prior to the period being projected (eg, a starting position)
+
+Apply the parameters for renege and capacity (by months waited) to
+projections of capacity and referrals. If needed, or if validating your
+parameters, include the observed incomplete pathways by the number of
+months waited for the period prior to the period being projected (eg, a
+starting position)
+
+## Usage
+
+``` r
+apply_params_to_projections(
+  capacity_projections,
+  referrals_projections,
+  incomplete_pathways = NULL,
+  renege_capacity_params,
+  max_months_waited,
+  surplus_treatment_redistribution_method = "evenly"
+)
+```
+
+## Arguments
+
+- capacity_projections:
+
+  numeric; vector of projections for capacity for each time step. This
+  must be the same length as referrals_projections
+
+- referrals_projections:
+
+  numeric; vector of projections for reneges for each time step. This
+  must be the same length as capacity_projections
+
+- incomplete_pathways:
+
+  tibble; two column data frame or tibble, with fields called
+  months_waited_id (taking values 0 to the maximum months waited group
+  of interest), and incompletes (the count of the number of incomplete
+  pathways) representing the count of incomplete pathways at timestep 0
+  (to initialise the model with)
+
+- renege_capacity_params:
+
+  tibble; three column data frame or tibble, with fields called
+  months_waited_id (taking values 0 to the maximum months waited group
+  of interest), and fields called capacity_param and renege_param, which
+  are outputs from the function
+  [`calibrate_capacity_renege_params()`](https://nhs-bnssg-analytics.github.io/NHSRtt/reference/calibrate_capacity_renege_params.md)
+
+- max_months_waited:
+
+  integer; the maximum number of months to group patients waiting times
+  by for the analysis. Data are published up to 104 weeks, so 24 is
+  likely to be the maximum useful value for this argument.
+
+- surplus_treatment_redistribution_method:
+
+  string; one of "none", "evenly" or "prioritise_long_waiters"; should
+  cases where the counts of reneges and treatments exceed the counts of
+  people waiting be redistributed, and if so, which method should be
+  used
+
+## Value
+
+a tibble with fields for period_id, months_waited_id,
+calculated_treatments, reneges, incompletes and input_treatments
+
+## Examples
+
+``` r
+max_months <- 4
+refs <- create_dummy_data(
+  type = "referral",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+incomp <- create_dummy_data(
+  type = "incomplete",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+
+comp <- create_dummy_data(
+  type = "complete",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+
+params <- calibrate_capacity_renege_params(
+  referrals = refs,
+  incompletes = incomp,
+  completes = comp,
+  max_months_waited = max_months,
+  redistribute_m0_reneges = TRUE,
+  allow_negative_params = FALSE
+)
+
+set.seed(3)
+future_capacity <- sample(300:500, 4, replace = TRUE)
+future_referrals <- sample(300:500, 4, replace = TRUE)
+incompletes_t0 <- dplyr::tibble(
+  months_waited_id = c(0, seq_len(max_months)),
+  incompletes = sample(
+    100:200,
+    length(c(0, seq_len(max_months))),
+    replace = TRUE
+   )
+)
+
+projections <- apply_params_to_projections(
+  capacity_projections = future_capacity,
+  referrals_projections = future_referrals,
+  incomplete_pathways = incompletes_t0,
+  renege_capacity_params = params,
+  max_months_waited = max_months
+)
+```

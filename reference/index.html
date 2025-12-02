@@ -40,8 +40,7 @@
 
 
 
-
-    </div><div class="section level2">
+      <dl></dl></div><div class="section level2">
 
 
 
@@ -52,145 +51,169 @@
 
         </dt>
         <dd>NHSRtt: A package for modelling waiting times using a stock and flow method</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="apply_parameter_skew.html">apply_parameter_skew()</a></code>
 
         </dt>
         <dd>Pivot the parameters passed into the function so relationships between the parameters remain consistent but giving control to providing more or less focus on extreme bins</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="apply_params_to_projections.html">apply_params_to_projections()</a></code>
 
         </dt>
         <dd>Apply the parameters for renege and capacity (by months waited) to projections of capacity and referrals. If needed, or if validating your parameters, include the observed incomplete pathways by the number of months waited for the period prior to the period being projected (eg, a starting position)</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="calc_wl_sizes.html">calc_wl_sizes()</a></code>
 
         </dt>
         <dd>Calculate Waiting List Sizes by Time Waited</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="calculate_incompletes.html">calculate_incompletes()</a></code>
 
         </dt>
         <dd>Calculate the number of incomplete pathways in a bin from the inflow, reneges and treatments. Following the calculations, apply an optional redistribution of the occasions where incompletes are negative (eg, more treatments have been performed than there were people).</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="calculate_timestep_transitions.html">calculate_timestep_transitions()</a></code>
 
         </dt>
         <dd>Calculates the flow from each stock at each timestep</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="calibrate_capacity_renege_params.html">calibrate_capacity_renege_params()</a></code>
 
         </dt>
         <dd>calculate the capacity and renege parameters over the period of data per month waited</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="convert_months_waited_to_id.html">convert_months_waited_to_id()</a></code>
 
         </dt>
         <dd>convert the string version of months waited to the numeric id version</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="create_dummy_data.html">create_dummy_data()</a></code>
 
         </dt>
         <dd>Create a set of dummy data to put through the functions of the package</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="find_p.html">find_p()</a></code>
 
         </dt>
         <dd>Find the value of p1 that achieves a target waiting time percentile</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="geom_fn_s.html">geom_fn_s()</a></code>
 
         </dt>
         <dd>Calculate Geometric Survival Probabilities</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="get_rtt_data.html">get_rtt_data()</a></code>
 
         </dt>
         <dd>Download and tidy the referral to treatment data from the NHS Statistics webpage</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="hist_percentile_calc.html">hist_percentile_calc()</a></code>
 
         </dt>
         <dd>Calculate the Time at a Given Percentile of a Weighted Distribution</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="initialise_removals.html">initialise_removals()</a></code>
 
         </dt>
         <dd>Configure Removals Data Frame</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="latest_orgs.html">latest_orgs()</a></code>
 
         </dt>
         <dd>Returns a table of organisations and how they map to one another from the latest available RTT file</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="latest_rtt_date.html">latest_rtt_date()</a></code>
 
         </dt>
         <dd>Returns the date of the latest available data</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="latest_rtt_file.html">latest_rtt_file()</a></code>
 
         </dt>
         <dd>Returns the url for the latest available file</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="month_attribution_lkp.html">month_attribution_lkp()</a></code>
 
         </dt>
         <dd>creates table of weights to apply to dates that represent the end of a week. These weights correspond tot he proportion of that week's counts that fall into the month that the "week end date" occurs, and the proportion of the counts that fall into the previous month</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="obtain_links.html">obtain_links()</a></code>
 
         </dt>
         <dd>Identify links within a given url</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="optimise_capacity.html">optimise_capacity()</a></code>
 
         </dt>
         <dd>Optimise the capacity profile for projections</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="optimise_steady_state.html">optimise_steady_state()</a></code>
 
         </dt>
         <dd>Identify the steady-state solution with the closest treatment capacity or renege rate to a given target</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="optimise_steady_state_lp.html">optimise_steady_state_lp()</a></code>
 
         </dt>
         <dd>Linear programming solution to steady state optimisation</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="redistribute_incompletes_evenly.html">redistribute_incompletes_evenly()</a></code>
 
         </dt>
         <dd>Redistribute cases where there are more treatments and reneges than people in a particular bin for a particular period. This function chooses the redistribute the surplus treatment to the people waiting the longest first</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="redistribute_incompletes_optimally.html">redistribute_incompletes_optimally()</a></code>
 
         </dt>
         <dd>Redistribute cases where there are more treatments and reneges than people in a particular bin for a particular period. This function chooses the redistribute the surplus treatment to the people waiting the longest first</dd>
-      </dl><dl><dt>
+
+        <dt>
 
           <code><a href="tidy_file.html">tidy_file()</a></code>
 
@@ -205,7 +228,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>

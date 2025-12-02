@@ -1,0 +1,96 @@
+# calculate the capacity and renege parameters over the period of data per month waited
+
+calculate the capacity and renege parameters over the period of data per
+month waited
+
+## Usage
+
+``` r
+calibrate_capacity_renege_params(
+  referrals,
+  incompletes,
+  completes,
+  max_months_waited = 12,
+  redistribute_m0_reneges,
+  full_breakdown = FALSE,
+  allow_negative_params
+)
+```
+
+## Arguments
+
+- referrals:
+
+  data frame with two columns; period_id and referrals. This represents
+  the count of referrals in each period
+
+- incompletes:
+
+  data from with three columns; period_id, months_waited_id, and
+  incompletes. This represents the count of incomplete pathways by the
+  number of months waited for each period
+
+- completes:
+
+  data from with three columns; period_id, months_waited_id, and
+  treatments. This represents the count of completed pathways by the
+  number of months waited for each period
+
+- max_months_waited:
+
+  integer; the maximum number of months to group patients waiting times
+  by for the analysis. Data are published up to 104 weeks, so 24 is
+  likely to be the maximum useful value for this argument.
+
+- redistribute_m0_reneges:
+
+  logical; should negative renege counts in the zero months waited stock
+  be reassigned to referrals?
+
+- full_breakdown:
+
+  logical; include a full breakdown of monthly transitions by period.
+  FALSE provides the parameters by months_waited_id only
+
+- allow_negative_params:
+
+  logical; data issues can result in negative renege or capacity
+  parameters. These would result in the opposite effect occurring (eg,
+  individuals entering the pathway rather than being removed). In some
+  cases, this can be legitimate (like an inter-provider transfer leading
+  to patients entering a pathway with no accompanying clock start) but
+  in many cases (particularly smaller specialties) these are mainly a
+  result of data system issues leading to insufficient clock starts, and
+  forcing the parameters to zero then allows sensible subsequent
+  calculations
+
+## Examples
+
+``` r
+max_months <- 4
+refs <- create_dummy_data(
+  type = "referral",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+incomp <- create_dummy_data(
+  type = "incomplete",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+
+comp <- create_dummy_data(
+  type = "complete",
+  max_months_waited = max_months,
+  number_periods = 6
+)
+
+params <- calibrate_capacity_renege_params(
+  referrals = refs,
+  incompletes = incomp,
+  completes = comp,
+  max_months_waited = max_months,
+  redistribute_m0_reneges = TRUE,
+  allow_negative_params = FALSE
+)
+```

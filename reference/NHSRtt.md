@@ -1,0 +1,4 @@
+# NHSRtt: A package for modelling waiting times using a stock and flow method
+
+NHSRtt: A package for modelling waiting times using a stock and flow
+method

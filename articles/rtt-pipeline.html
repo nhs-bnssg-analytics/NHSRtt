@@ -118,7 +118,7 @@ valdiation period.</p>
 <span><span class="va">prediction_end</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2025-10-31"</span><span class="op">)</span></span>
 <span><span class="va">analysis_trust</span> <span class="op">&lt;-</span> <span class="st">"RC9"</span> <span class="co"># filter for a single trust</span></span>
 <span><span class="va">max_months_waited</span> <span class="op">&lt;-</span> <span class="fl">12</span> <span class="co"># I am only interested in waiting time bins up to 12 months</span></span></code></pre></div>
-<p><img src="rtt-pipeline_files/figure-html/visualise-analysis-timings-1.png" width="672"></p>
+<p><img src="rtt-pipeline_files/figure-html/visualise-analysis-timings-1.png" class="r-plt" width="672"></p>
 <p>The public data (<a href="https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/" class="external-link">source</a>)
 can be sourced with the <code><a href="../reference/get_rtt_data.html">get_rtt_data()</a></code> function. The data
 we are interested from the website are the pathways that are admitted
@@ -1367,7 +1367,7 @@ dataset than we have available, so first we download an extra six months
 of data to append onto the start of the existing dataset, before doing
 the data manipulation prior to the forecasting. This will give us two
 years in total.</p>
-<p><img src="rtt-pipeline_files/figure-html/tbats-visualisation-1.png" width="672"></p>
+<p><img src="rtt-pipeline_files/figure-html/tbats-visualisation-1.png" class="r-plt" width="672"></p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># obtain and manipulate tbats data</span></span>
 <span><span class="va">additional_start</span> <span class="op">&lt;-</span> <span class="va">calibration_start</span> <span class="op"><a href="https://lubridate.tidyverse.org/reference/mplus.html" class="external-link">%m-%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/weekday.POSIXt.html" class="external-link">months</a></span><span class="op">(</span><span class="fl">6</span><span class="op">)</span></span>
@@ -1711,7 +1711,7 @@ waited over the projection period:</p>
 <span>      <span class="st">"TBATS"</span> <span class="op">=</span> <span class="st">"longdash"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="rtt-pipeline_files/figure-html/visualise-projections-1.png" width="768"></p>
+<p><img src="rtt-pipeline_files/figure-html/visualise-projections-1.png" class="r-plt" width="768"></p>
 <p>For additional ways of visualising wait times that have proved
 effective, please see the other vignette.</p>
 </div>
@@ -1726,7 +1726,7 @@ effective, please see the other vignette.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

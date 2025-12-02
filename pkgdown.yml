@@ -1,10 +1,10 @@
 pandoc: 3.1.11
-pkgdown: 2.1.3
+pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   animated-charts: animated-charts.html
   rtt-pipeline: rtt-pipeline.html
-last_built: 2025-10-06T10:30Z
+last_built: 2025-12-02T13:58Z
 urls:
   reference: https://nhs-bnssg-analytics.github.io/NHSRtt/reference
   article: https://nhs-bnssg-analytics.github.io/NHSRtt/articles
