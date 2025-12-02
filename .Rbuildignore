@@ -7,3 +7,4 @@ ad_hoc
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^data-raw$

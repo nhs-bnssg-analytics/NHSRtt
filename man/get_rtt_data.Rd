@@ -20,7 +20,7 @@ get_rtt_data(
 \arguments{
 \item{url}{string; url of the NHS Referral to Treatment (RTT) Waiting Times}
 
-\item{date_start}{date; start date (earliest date is 1st April 2016, but the
+\item{date_start}{date; start date (earliest date is 1st May 2016, but the
 default is 1st April 2019)}
 
 \item{date_end}{date; end date (defaults to "today")}
@@ -58,7 +58,6 @@ webpage
 \examples{
 \dontrun{
 monthly_rtt <- NHSRtt::get_rtt_data(
-  type = "complete",
   date_start = as.Date("2024-10-01"),
   date_end = as.Date("2024-11-01"),
   show_progress = TRUE

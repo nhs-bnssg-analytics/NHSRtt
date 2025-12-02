@@ -72,7 +72,8 @@ params <- calibrate_capacity_renege_params(
   incompletes = incompletes,
   completes = completes,
   max_months_waited = max_months_waited,
-  redistribute_m0_reneges = TRUE
+  redistribute_m0_reneges = TRUE,
+  allow_negative_params = FALSE
 )
 ```
 

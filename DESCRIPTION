@@ -1,14 +1,15 @@
 Package: NHSRtt
 Type: Package
 Title: Scenario plan for future elective scenarios using public NHS data
-Version: 0.2.3
+Version: 0.4.1
 Authors@R: c(
     person("Sebastian", "Fox", , "sebastian.fox3@nhs.net", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2832-773X")),
     person("Richard", "Wood", role = "aut",
            comment = c(ORCID = "0000-0002-3476-395X ")),
     person("Richard", "Blackwell", role = "aut"),
-    person("Simon", "Wellesley-Miller", role = "aut")
+    person("Simon", "Wellesley-Miller", role = "aut"),
+    person("Neil", "Walton", role = "aut")
   )
 Description: Using published (or local) data for counts of completed pathways, 
     incomplete treatment pathways and referrals, produce a stock and flow model 
@@ -16,10 +17,12 @@ Description: Using published (or local) data for counts of completed pathways,
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
+Depends: R (>= 4.1)
 Imports: 
     dplyr,
     dtplyr,
+    lpSolve,
     lubridate,
     purrr,
     data.table,
