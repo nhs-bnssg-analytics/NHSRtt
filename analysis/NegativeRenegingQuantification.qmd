@@ -1,0 +1,284 @@
+---
+title: "Negative Reneging - Investigation"
+author: Luke Shaw
+date: "`r Sys.Date()`"
+format: 
+  html:
+    embed-resources: true
+knitr:
+  opts_chunk:
+    code-fold: true
+    warning: false
+    message: false
+output-dir: "./analysis"
+---
+
+# About 
+
+Investigating what reneging looks like for different months across trusts. Specifically, looking for instances where we have negative reneges, a paradoxical instance of seemingly more people being treated from that month's bucket than are in the bucket. 
+
+```{r}
+#| label: set-up
+
+library(NHSRtt)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+
+theme_set(theme_bw() + theme(legend.position="top",legend.key.width = unit(2, "cm")
+))
+```
+
+We use the pins 24 month data for speediness.
+
+```{r}
+#| label: data-read-pins
+
+# NB if want to use different data range will need NHSRtt::get_rtt_data but takes a while
+cache_file <- "data/rtt_24months.rds"
+
+# forcing manual running (going inside the impossible if statement) if doing for the first 
+# time or you want to reload
+if(0==1){
+  board <- pins::board_url(c(
+    rtt_24months = "https://connect.strategyunitwm.nhs.uk/rtt-data/24-months/"
+  ))
+
+  rtt_24months_tbl <- board |>
+    pins::pin_read("rtt_24months")
+
+  saveRDS(rtt_24months_tbl, cache_file)
+} else {
+  rtt_tbl <- readRDS(here::here(cache_file))  # cache_file already contains "data/"
+}
+```
+
+We only take the largest of the trusts. The calculation used is
+```r
+    mutate(prev_Incomplete = lag(Incomplete, 1)) |> 
+    mutate(Reneges = case_when(
+        months_waited_id==0 ~ Referrals - Complete - Incomplete,
+        months_waited_id>0 ~  prev_Incomplete - Complete - Incomplete
+    )) |> 
+```
+
+Which in words is (or should be!) that the number of reneges is the monthly inflow minus the outflow.
+
+```{r}
+#| label: plot-observed-reneges
+
+# rtt_tbl |> count(type)
+# rtt_tbl |> filter(period=="2023-12-01", months_waited_id==0)
+
+# rtt_tbl <- rtt_tbl |> filter(trust=="NORTH BRISTOL NHS TRUST")
+trusts_to_use <- rtt_tbl |>
+    group_by(trust) |> 
+    summarise(value=max(value)) |> 
+    filter(value>20000 | trust %in% c("NORTH BRISTOL NHS TRUST","UNIVERSITY HOSPITALS PLYMOUTH NHS TRUST")) |> 
+    pull(trust)
+renege_tbl <- rtt_tbl |> 
+    filter(trust %in% trusts_to_use) |> 
+    tidyr::pivot_wider(names_from=type,values_from=value, values_fill=0) |> 
+    group_by(specialty,period, trust, period_id) |> 
+    arrange(months_waited_id) |> 
+    mutate(prev_Incomplete = lag(Incomplete, 1)) |> 
+    mutate(Reneges = case_when(
+        months_waited_id==0 ~ Referrals - Complete - Incomplete,
+        months_waited_id>0 ~  prev_Incomplete - Complete - Incomplete
+    )) |> 
+    ungroup()
+
+renege_tbl <- renege_tbl |>
+    mutate(specialty = fct_relevel(specialty,
+      function(x) c(
+        x[!grepl("^Other - ", x)],
+        x[ grepl("^Other - ", x)]
+      )
+    )) |> 
+    mutate(specialty = fct_rev(specialty)) |> 
+    mutate(specialty = fct_relevel(specialty,"Total",after=0L)) 
+
+signed_sqrt_trans <- scales::trans_new(
+  name = "signed_sqrt",
+  transform = function(x) sign(x) * sqrt(abs(x)),
+  inverse = function(x) sign(x) * x^2
+)
+signed_cubert_trans <- scales::trans_new(
+  name = "signed_cubert",
+  transform = function(x) sign(x) * (abs(x))^(1/3),
+  inverse = function(x) sign(x) * x^3
+)
+renege_tbl |> 
+    ggplot(aes(x=Reneges, y=fct_rev(factor(months_waited_id)))) + 
+    ggridges::geom_density_ridges() + 
+    geom_vline(xintercept=0,linetype=2) + 
+    scale_x_continuous(trans=signed_sqrt_trans) + 
+    labs(title = "Reneges by month - for the largest trusts in the data", 
+    subtitle = paste0(
+    "\nMonth 0 also lots of neg reneges which is expected",
+    "\nMonth 12 looks odd - unsure why? "
+    ),
+    x="Reneges (sqrt axis)",
+    y="Months Waited")
+```
+
+```{r}
+#| label: parameter-tbl
+
+# matching the table at end of https://www.youtube.com/watch?v=fjLtrm3kEuw
+parameter_tbl <- renege_tbl |> 
+    # exclude last one as has NAs
+    filter(period!=max(period)) |> 
+    group_by(specialty, trust, months_waited_id) |> 
+    summarise(
+        renege_parameter = sum(Reneges) / (sum(prev_Incomplete,na.rm=T) + sum(Referrals,na.rm=T)),
+        capacity_parameter = sum(Complete) / (sum(prev_Incomplete,na.rm=T) + sum(Referrals,na.rm=T)),
+        .groups="drop"
+    )
+if(0==1){
+parameter_tbl |>
+  DT::datatable(
+    options = list(
+      columnDefs = list(
+        list(
+          targets = which(names(parameter_tbl) == "trust") - 1,
+          width = "200px"
+        ),
+        list(
+          targets = which(sapply(parameter_tbl, is.numeric)) - 1,
+          render = DT::JS("function(data) { return Math.round(data * 100) / 100; }")
+        )
+      )
+    )
+  )
+}
+```
+
+# Look at specific examples - Plymouth & NBT
+
+```{r}
+#| label: check-specific-example
+renege_tbl |> 
+    filter(trust=="UNIVERSITY HOSPITALS PLYMOUTH NHS TRUST") |> 
+    summarise(median_Reneges = median(Reneges), .by = c(specialty, months_waited_id, trust)) |>
+    (\(d) ggplot(d, aes(x = months_waited_id, y = specialty, fill = median_Reneges)) + 
+        geom_tile(col = "darkgrey") + 
+        scale_fill_gradient2(
+            low = "red",
+            mid = "white",
+            high = "blue",
+            midpoint = 0,
+            limits = c(-1, 1) * max(abs(d$median_Reneges), na.rm = TRUE)
+        ) + 
+        scale_x_continuous(breaks = 0:12)
+    )() + 
+    labs(
+    x = "Months Waited",
+    y= "Specialty",
+    fill = "Median Reneges",
+    title = paste0("Trust: ", "UNIVERSITY HOSPITALS PLYMOUTH NHS TRUST")
+    )
+
+
+
+```
+
+```{r}
+#| label: create-renege-plot-single-example
+
+trust_name = "NORTH BRISTOL NHS TRUST"
+renege_tbl1 <- renege_tbl |> filter(trust==trust_name)
+
+renege_tbl1 |>     
+    summarise(median_Reneges = median(Reneges), .by = c(specialty, months_waited_id, trust)) |>
+    (\(d) ggplot(d, aes(x = months_waited_id, y = specialty, fill = median_Reneges)) + 
+        geom_tile(col = "darkgrey") + 
+        scale_fill_gradient2(
+            low = "red",
+            mid = "white",
+            high = "blue",
+            midpoint = 0,
+            limits = c(-1, 1) * max(abs(d$median_Reneges), na.rm = TRUE)
+        ) + 
+        scale_x_continuous(breaks = 0:12)
+    )() + 
+    labs(
+    x = "Months Waited",
+    y= "Specialty",
+    fill = "Median Reneges",
+    title = paste0("Trust: ", trust_name)
+    )
+```
+
+# Create Renege Plots for every large trust in the data
+```{r}
+#| label: create-renege-plots
+#| results: asis
+#| fig-width: 14
+#| fig-height: 6
+
+library(patchwork)
+
+# Get all trusts from either table
+all_trusts <- union(unique(renege_tbl$trust), unique(parameter_tbl$trust))
+
+cat("::: {.panel-tabset}\n\n")
+
+purrr::walk(all_trusts, \(trust_name) {
+    
+    cat(paste0("## ", trust_name, "\n\n"))
+    
+    p1 <- renege_tbl |>
+        filter(trust == trust_name, months_waited_id!=12) |>
+        summarise(median_Reneges = median(Reneges), .by = c(specialty, months_waited_id, trust)) |>
+        (\(d) ggplot(d, aes(x = months_waited_id, y = specialty, fill = median_Reneges)) +
+            geom_tile(col = "darkgrey") +
+            scale_fill_gradient2(
+                low = "red", mid = "white", high = "blue",
+                midpoint = 0,
+                limits = c(-1, 1) * max(abs(d$median_Reneges), na.rm = TRUE)
+            ) +
+            scale_x_continuous(breaks = 0:12) +
+            labs(
+                x = "Months Waited", y = "Specialty",
+                fill = "Median Reneges",
+                title = "Median Reneges",
+                subtitle = trust_name
+            )
+        )()
+    
+    p2 <- parameter_tbl |>
+        filter(trust == trust_name, months_waited_id!=12) |>
+        (\(d) ggplot(d, aes(x = months_waited_id, y = specialty, fill = renege_parameter)) +
+            geom_tile(col = "darkgrey") +
+            scale_fill_gradient2(
+                low = "red", mid = "white", high = "blue",
+                midpoint = 0,
+                limits = c(-1, 1) * max(abs(d$renege_parameter), na.rm = TRUE)
+            ) +
+            scale_x_continuous(breaks = 0:12) +
+            labs(
+                x = "Months Waited", y = "Specialty",
+                fill = "Renege Parameter",
+                title = "Renege Parameter",
+                subtitle = trust_name
+            ) +
+            geom_text(aes(label = round(renege_parameter, 2)))
+        )()
+    
+    print(p1 + p2)
+    
+    cat("\n\n")
+})
+
+cat(":::\n")
+```
+
+UNIVERSITY HOSPITALS BIRMINGHAM NHS FOUNDATION TRUST is a good example of first month issues with negative reneges.
+
+# Model Assumptions
+
+How does the model currently deal with Negative Reneges? 
+
+# What do we do next? 
